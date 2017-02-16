@@ -1,0 +1,4 @@
+clausetype,obj,prep1,prep2,prep3,comp,embtense,embsubj,embpred
+DECLARATIVE,False,False,False,False,NONE,TENSED,True,True
+INTERROGATIVE,False,False,False,False,WH,TENSED,True,True
+IMPERATIVE,False,False,False,False,NONE,NONE,False,True

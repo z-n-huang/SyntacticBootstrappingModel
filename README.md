@@ -9,7 +9,7 @@ This package implements the model of syntactic bootstrapping described in [White
 To install, simply use `pip`.
 
 ```bash
-sudo pip install git+git://github.com/aaronstevenwhite/PyGLMM.git
+sudo pip install git+git://github.com/aaronstevenwhite/MainClauseModel.git
 ```
 
 You can also clone and use the included `setup.py`.

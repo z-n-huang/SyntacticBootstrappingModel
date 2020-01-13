@@ -62,7 +62,7 @@ def main():
     print('Language selected:\t', lg)
     
     if lg == 'en':
-        data = dataen.main()
+        data = data.main()
     elif lg == 'mc':
         data = datamc.main()
     

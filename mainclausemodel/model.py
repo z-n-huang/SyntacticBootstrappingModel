@@ -131,7 +131,27 @@ class MainClauseModel(object):
         
         softand = self._verbfeatprob[:,:,None]*self._verbreps[:,:,None]*self._projection[None,:,:]
         self._featureprob = 1.-T.prod(1.-softand, axis=1)
-                
+
+    # ADDED: divergence function. Calculates JS-divergence (cf. SciPy version which yields the square root value)
+    def _get_divergence(self):
+        vr = self._verbreps
+        assertProb = vr[:, 0]
+        requestProb = vr[:, 1]
+        m0 = (assertProb + 1-requestProb)/2
+        m1 = (1-assertProb + requestProb)/2
+        kl_assert = (assertProb * T.log(assertProb / m0) 
+                    + (1-assertProb) * T.log((1-assertProb) / m1))
+        kl_request = ((1-requestProb) * T.log((1-requestProb) / m0) 
+                + requestProb * T.log(requestProb / m1))
+        js = ((kl_assert + kl_request) / 2 / np.log(2))**1 
+        # Above code leads to NaN error for verbs 0 and 1 (DECLARATIVE & IMPERATIVE), probably because of how Theano deals with floating point representations???
+        # These should be 0. Stipulate them as such.
+        # cf. https://stackoverflow.com/questions/31919818/theano-sqrt-returning-nan-values. 
+        js = T.set_subtensor(js[0], 0.) # try ... js[tuple([0,])], 0...
+        js = T.set_subtensor(js[1], 0.)
+
+        return js
+		                
     def _initialize_loss(self):
 
         self._log_projection_prior = (self.gamma-1.)*T.log(self._projection) +\
@@ -190,17 +210,16 @@ class MainClauseModel(object):
         # r = 1./self._verbreps.sum(axis=1)[self.data.verb,None]
 
         #self._ll_per_feature = k*T.log(p)+r*T.log(1.-p)+T.gammaln(k+r)-T.gammaln(k+1)-T.gammaln(r)
-        self._ll_per_feature = k*T.log(p)+(1.-k)*T.log(1.-p)
+        self._ll_per_feature = k*T.log(p)+(1.-k)*T.log(1.-p) # log likelihood, by defn. negative (log 1 = 0)
 
         self._total_ll = T.sum(self._ll_per_feature)/(self.data.verb.shape[0]*\
                                                       self.data.n('feature'))
         self._total_loss = self._prior+self._orthogonality_penalty+self._total_ll
-
+        self._divergence = self._get_divergence() # ADDED; try max vs. mean
         self._itr = T.ivector('itr')
         self._itr_ll = T.sum(self._ll_per_feature[self._itr])/self.data.n('feature')
-        self._itr_loss = self._prior+self._orthogonality_penalty+self._itr_ll
+        self._itr_loss = self._prior+self._orthogonality_penalty+self._itr_ll #+ T.mean(self._divergence)*-1 #ADDED # Subtract divergence. Effectively, we are taking the raw log-likelihood (_ll_per_feature), a negative value, and adjusting it by this divergence score, a positive value. Since the model tries to maximize log-likelihood, we want the adjusted log-likelihood to be lower when the divergence score is high. One way to do so is subtract divergence from log-likelihood.
                          
-
     def _initialize_updaters(self, stochastic):
         update_dict_ada = []
 
@@ -220,13 +239,15 @@ class MainClauseModel(object):
                 rep_grad = T.switch((rep<-10)*(rep_grad>0),
                                     T.zeros_like(rep_grad),
                                     rep_grad)
+                # ADDED; incorporating divergence causes verbreps gradients for DECLARATIVE and IMPERATIVE to equal NaN; so replace NaN with 0s (declaratives and imperative gradients don't change)
+                rep_grad = T.switch(T.isnan(rep_grad), 0., rep_grad)
             
             self.rep_grad_hist_t[name] = shared(np.ones(rep.shape.eval()),
                                                 name=name+'_hist'+self._ident)
 
             rep_grad_adj = rep_grad / (T.sqrt(self.rep_grad_hist_t[name]))
 
-            learning_rate = 1.# if name != 'nu' else 1e-20
+            learning_rate = 2.# if name != 'nu' else 1e-20
             
             update_dict_ada += [(self.rep_grad_hist_t[name], self.rep_grad_hist_t[name] +\
                                                              T.power(rep_grad, 2)),
@@ -252,12 +273,17 @@ class MainClauseModel(object):
             if verbose:
                 verb_list = list(self.data.categories('verb')[np.array(self.data.verb)[idx]])
 
-                print '\n', j, '\t', np.round(total_loss, 3), '\t',\
-                    np.round(itr_loss,3), '\t', verb_list,'\n'
+                print('\n', j, '\t', np.round(total_loss, 3), '\t',\
+                    np.round(itr_loss,3), '\t', verb_list,'\n',
+                    # ADDED for debugging
+                    '\t', verb_list,'\t verb ID', np.array(self.data.verb)[idx],
+                    #'\njs', self._divergence.eval(), '\nverbrep gradients', self.rep_grad_hist_t['verbreps'].eval()
+                    )
+                    
 
         
     def fit(self, data, nepochs=0, niters=20000, nupdates=1,
-            stochastic=True, verbose=False):
+            stochastic=True, verbose=True): # DEFAULT verbose = False
         self._initialize_model(data, stochastic)
 
         sentid = list(self.data.categories('sentenceid'))
@@ -270,7 +296,7 @@ class MainClauseModel(object):
                 shuffle(sentid)
 
                 if verbose:
-                    print e
+                    print(e)
                     
                 self._fit(sentid, nupdates, verbose)
                 
@@ -333,12 +359,12 @@ def main():
     
     data = data.main()
 
-    models = {c: MainClauseModel() for c in data.iterkeys()}
+    models = {c: MainClauseModel() for c in data.keys()}
 
-    for c, m in models.iteritems():
-        print c,'\n'
+    for c, m in models.items():
+        print('model-main', c,'\n') #modified
         m.fit(data[c])
-        print '\n'
+        print('\n')
 
         break
         

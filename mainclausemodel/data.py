@@ -172,7 +172,7 @@ def main(datapath='../bin/data/gleason_data.csv', featurepath='../bin/data/mainc
     if separate_children:
         data = {}
         
-        for c in d.child.unique()[:10]:
+        for c in d.child.unique()[:5]:
             d_proc = preprocess_features(d[d.child==c])
             print('Child:', c, d[d.child==c].shape)
             data[c] = MainClauseData(d_proc, f)

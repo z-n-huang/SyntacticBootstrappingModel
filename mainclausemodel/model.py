@@ -267,7 +267,7 @@ class MainClauseModel(object):
             idx = self.data.sentence(sid)
 
             for i in range(nupdates):
-                total_loss, itr_loss, verbreps, projection = self.updater_ada(idx)
+                total_loss, itr_loss, verbreps, projection, divergence = self.updater_ada(idx)
 
             if not j % 10:
                 self._verbreps_hist.append(verbreps)

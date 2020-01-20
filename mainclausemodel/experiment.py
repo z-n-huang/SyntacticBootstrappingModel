@@ -53,7 +53,7 @@ class MainClauseExperiment(object):
             return self._results_verbreps, self._results_projection
 
 def main():
-    import dataen, datamc
+    import data, datamc
     import argparse
     # Toggle language options. Note that the penalty has to be manually toggled in model.py
     parser = argparse.ArgumentParser(description='Run bootstrapping model.')

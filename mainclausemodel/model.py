@@ -215,10 +215,13 @@ class MainClauseModel(object):
         self._total_ll = T.sum(self._ll_per_feature)/(self.data.verb.shape[0]*\
                                                       self.data.n('feature'))
         self._total_loss = self._prior+self._orthogonality_penalty+self._total_ll
-        self._divergence = self._get_divergence() # ADDED; try max vs. mean
+        self._divergence = self._get_divergence() # ADDED. Try adding "[self.data.verb][self._itr]", so that the model only computes JS for the observed predicates
         self._itr = T.ivector('itr')
         self._itr_ll = T.sum(self._ll_per_feature[self._itr])/self.data.n('feature')
-        self._itr_loss = self._prior+self._orthogonality_penalty+self._itr_ll #+ T.mean(self._divergence)*-1 #ADDED # Subtract divergence. Effectively, we are taking the raw log-likelihood (_ll_per_feature), a negative value, and adjusting it by this divergence score, a positive value. Since the model tries to maximize log-likelihood, we want the adjusted log-likelihood to be lower when the divergence score is high. One way to do so is subtract divergence from log-likelihood.
+        self._itr_loss = self._prior+self._orthogonality_penalty+self._itr_ll 
+        # + T.mean(self._divergence)*-1 # Option A: mean of ALL divergences
+        # + T.mean(self._divergence[self.data.verb][self._itr])*-1 # Option B: mean of divergences for observed verbs
+        #ADDED # Subtract divergence. Effectively, we are taking the raw log-likelihood (_ll_per_feature), a negative value, and adjusting it by this divergence score, a positive value. Since the model tries to maximize log-likelihood, we want the adjusted log-likelihood to be lower when the divergence score is high. One way to do so is subtract divergence from log-likelihood.
                          
     def _initialize_updaters(self, stochastic):
         update_dict_ada = []
@@ -255,7 +258,7 @@ class MainClauseModel(object):
             
         self.updater_ada = function(inputs=[self._itr],
                                            outputs=[self._total_ll, self._itr_ll,
-                                                    self._verbreps, self._projection],
+                                                    self._verbreps, self._projection, self._divergence],
                                            updates=update_dict_ada,
                                            name='updater_ada'+self._ident)
 
@@ -277,7 +280,7 @@ class MainClauseModel(object):
                     np.round(itr_loss,3), '\t', verb_list,'\n',
                     # ADDED for debugging
                     '\t', verb_list,'\t verb ID', np.array(self.data.verb)[idx],
-                    #'\njs', self._divergence.eval(), '\nverbrep gradients', self.rep_grad_hist_t['verbreps'].eval()
+                    #'\njs', divergence, '\nverbrep gradients', self.rep_grad_hist_t['verbreps'].eval()
                     )
                     
 

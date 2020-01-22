@@ -203,7 +203,7 @@ class MainClauseModel(object):
             self._orthogonality_penalty = -self.orthogonality_penalty*\
                                           verbrep2_rawsum/(self.nlatfeats*self.data.n('verb'))
         else:
-            self._orthogonality_penalty = 0.
+            self._orthogonality_penalty = 0.	
         
         p = self._featureprob[self.data.verb]
         k = self.data.features
@@ -215,12 +215,12 @@ class MainClauseModel(object):
         self._total_ll = T.sum(self._ll_per_feature)/(self.data.verb.shape[0]*\
                                                       self.data.n('feature'))
         self._total_loss = self._prior+self._orthogonality_penalty+self._total_ll
-        self._divergence = self._get_divergence() # ADDED. Try adding "[self.data.verb][self._itr]", so that the model only computes JS for the observed predicates
         self._itr = T.ivector('itr')
+        self._divergence = T.mean(self._get_divergence()[self.data.verb][self._itr])*-1 # ADDED. Try adding "[self.data.verb][self._itr]", so that the model only computes JS for the observed predicates
+        # T.mean(self._get_divergence()) # Option A: mean of ALL divergences
+        # T.mean(self._get_divergence()[self.data.verb][self._itr]) # Option B: mean of divergences for observed verbs
         self._itr_ll = T.sum(self._ll_per_feature[self._itr])/self.data.n('feature')
-        self._itr_loss = self._prior+self._orthogonality_penalty+self._itr_ll 
-        # + T.mean(self._divergence)*-1 # Option A: mean of ALL divergences
-        # + T.mean(self._divergence[self.data.verb][self._itr])*-1 # Option B: mean of divergences for observed verbs
+        self._itr_loss = self._prior+self._orthogonality_penalty+self._itr_ll + self._divergence
         #ADDED # Subtract divergence. Effectively, we are taking the raw log-likelihood (_ll_per_feature), a negative value, and adjusting it by this divergence score, a positive value. Since the model tries to maximize log-likelihood, we want the adjusted log-likelihood to be lower when the divergence score is high. One way to do so is subtract divergence from log-likelihood.
                          
     def _initialize_updaters(self, stochastic):
@@ -276,8 +276,8 @@ class MainClauseModel(object):
             if verbose:
                 verb_list = list(self.data.categories('verb')[np.array(self.data.verb)[idx]])
 
-                print('\n', j, '\t', np.round(total_loss, 3), '\t',\
-                    np.round(itr_loss,3), '\t', verb_list,'\n',
+                print('\n', j, '\tloss', np.round(total_loss, 3), '\titr_loss',\
+                    np.round(itr_loss,3), '\tdiverge', np.round(divergence, 7), '\t', verb_list,'\n',
                     # ADDED for debugging
                     '\t', verb_list,'\t verb ID', np.array(self.data.verb)[idx],
                     #'\njs', divergence, '\nverbrep gradients', self.rep_grad_hist_t['verbreps'].eval()

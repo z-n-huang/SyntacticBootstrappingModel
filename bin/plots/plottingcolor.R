@@ -15,16 +15,17 @@ theme_set(theme_classic()+ theme(axis.line.x = element_line(colour = 'black', si
 ))
 
 # load data
-verbreps_results <- read_csv("results/verbreps_resultsen nopen.csv") #  w(/o) " 10wpen"
-projection_results <- read_csv("results/projection_resultsen nopen.csv")
-gleason_data <- read_csv("data/gleason_data.csv")
+suff = "10wpensel" # "10nopen" "10wpenall", "10wpensel"
+verbreps_results <- read_csv(paste("results/verbreps_resultsmc ", suff, ".csv", sep = "")) #  w(/o) " 10wpen"
+projection_results <- read_csv(paste("results/projection_resultsmc ", suff, ".csv", sep = ""))
+#gleason_data <- read_csv("data/gleason_data.csv")
 #verbreps_results <- verbreps_results %>% filter(verb != "IMPERATIVE" & verb!="DECLARATIVE")
-#gleason_data <- read_csv("data/processedmc2.csv")
-#verbreps_results <- verbreps_results %>% filter(verb != "tell"
+gleason_data <- read_csv("data/processedmc2.csv")
+verbreps_results <- verbreps_results %>% filter(verb != "tell"
 #                                              & verb != "IMPERATIVE" & verb!="DECLARATIVE"
 #                                              & verb != "帮" & verb !="让"
 #                                              & verb != "看看"
-#                                        )
+                                        )
 
 # plot verb representations
 

@@ -220,7 +220,7 @@ class MainClauseModel(object):
         # T.mean(self._get_divergence()) # Option A: mean of ALL divergences
         # T.mean(self._get_divergence()[self.data.verb][self._itr]) # Option B: mean of divergences for observed verbs
         self._itr_ll = T.sum(self._ll_per_feature[self._itr])/self.data.n('feature')
-        self._itr_loss = self._prior+self._orthogonality_penalty+self._itr_ll + self._divergence
+        self._itr_loss = self._prior+self._orthogonality_penalty+self._itr_ll #+ self._divergence
         #ADDED # Subtract divergence. Effectively, we are taking the raw log-likelihood (_ll_per_feature), a negative value, and adjusting it by this divergence score, a positive value. Since the model tries to maximize log-likelihood, we want the adjusted log-likelihood to be lower when the divergence score is high. One way to do so is subtract divergence from log-likelihood.
                          
     def _initialize_updaters(self, stochastic):

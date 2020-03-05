@@ -15,17 +15,31 @@ theme_set(theme_classic()+ theme(axis.line.x = element_line(colour = 'black', si
 ))
 
 # load data
-suff = "10wpensel" # "10nopen" "10wpenall", "10wpensel"
-verbreps_results <- read_csv(paste("results/verbreps_resultsmc ", suff, ".csv", sep = "")) #  w(/o) " 10wpen"
-projection_results <- read_csv(paste("results/projection_resultsmc ", suff, ".csv", sep = ""))
-#gleason_data <- read_csv("data/gleason_data.csv")
-#verbreps_results <- verbreps_results %>% filter(verb != "IMPERATIVE" & verb!="DECLARATIVE")
-gleason_data <- read_csv("data/processedmc2.csv")
-verbreps_results <- verbreps_results %>% filter(verb != "tell"
-#                                              & verb != "IMPERATIVE" & verb!="DECLARATIVE"
-#                                              & verb != "帮" & verb !="让"
-#                                              & verb != "看看"
-                                        )
+## English
+suff = "22wnopen" # "10nopen" "10wpenall", "10wpensel"
+verbreps_results <- read_csv(paste("results/feb2020 draft/verbreps_resultsen ", suff, ".csv", sep = "")) #  w(/o) " 10wpen"
+projection_results <- read_csv(paste("results/feb2020 draft/projection_resultsen ", suff, ".csv", sep = ""))
+gleason_data <- read_csv("data/gleason_data.csv")
+verbreps_results <- verbreps_results %>% filter(verb != "IMPERATIVE" & verb!="DECLARATIVE")
+
+## END LOADING ENGLISH
+
+## Mandarin
+suff = "wpeno" # "wnopen" "wnopen"
+verbreps_results <- rbind(
+  read_csv(paste("results/feb2020 draft/verbreps_resultsmc 22", suff, ".csv", sep = "")),
+  read_csv(paste("results/feb2020 draft/verbreps_resultsmc 20", suff, ".csv", sep = "")),
+  read_csv(paste("results/feb2020 draft/verbreps_resultsmc 10", suff, ".csv", sep = ""))
+)
+projection_results <- rbind(
+  read_csv(paste("results/feb2020 draft/projection_resultsmc 22", suff, ".csv", sep = "")),
+  read_csv(paste("results/feb2020 draft/projection_resultsmc 20", suff, ".csv", sep = "")),
+  read_csv(paste("results/feb2020 draft/projection_resultsmc 10", suff, ".csv", sep = ""))
+)
+
+gleason_data <- read_csv("data/processedmc22.csv")
+verbreps_results <- verbreps_results %>% filter(verb != "tell")
+## END LOADING MANDARIN
 
 # plot verb representations
 
@@ -59,9 +73,17 @@ repmeans.summ$verbPlot <- mapvalues(repmeans.summ$verb,
                                            "like (D)", "tell (B/D)", "try (D)", "need (D)", "remember (B)"
                                     )
 ) 
+
 repmeans.summ <- repmeans.summ %>% filter(verbPlot != "<NA>")
+
 #tikz('~/experiments/MainClauseModel/bin/verbrep_prob.tikz', width=5.5, height=4)
-ggplot(repmeans.summ, aes(x=(sentence+1)*10, y=med, color = variable, fill = variable )) + # linetype=variable, 
+ggplot(repmeans.summ
+       %>% filter(verbPlot != "vacuous-verb"
+         & verbPlot != "IMPERATIVE" & verbPlot !="DECLARATIVE"
+         & verbPlot != "bang 'help' (O)" & verbPlot != "rang 'let' (O)"
+         & verbPlot != "kankan 'see-DUP' (B)"
+       ), 
+       aes(x=(sentence+1)*10, y=med, color = variable, fill = variable )) + # linetype=variable, 
   geom_ribbon(aes(ymin=qmin, ymax=qmax), alpha = 0.1, color = NA) +
   geom_ribbon(aes(ymin=q25, ymax=q75),  alpha = 0.3, color = NA) +
   #geom_ribbon(alpha=.05, aes(ymin=q025, ymax=q975)) +
@@ -76,6 +98,7 @@ ggplot(repmeans.summ, aes(x=(sentence+1)*10, y=med, color = variable, fill = var
 #dev.off()
 
 ### PART TWO: Probability of semantics vs. frequency of clausal complements
+gleason_data$has.embpred <- gleason_data$embpred!='NONE'
 gleason_data$has.embpred <- gleason_data$embpred!='FALSE'
 
 emb.counts <- filter(gleason_data, verb %in% unique(repmeans.summ$verb)) %>%
@@ -91,15 +114,51 @@ repmeans.emb.cast$dorb <- 1-(1-repmeans.emb.cast$belief)*(1-repmeans.emb.cast$de
 
 logistic <- function(p) log(p)-log(1-p)
 
+repmeans.emb$verb <- mapvalues(repmeans.emb$verb, 
+                                    from = c("DECLARATIVE", "IMPERATIVE", "要", "看", "说",
+                                             "看看", "讲", "想", "知道", "叫",
+                                             "喜欢", "告诉", "帮", "让", "觉得",
+                                             "want", "see", "know", "think", "say",
+                                             "like", "tell", "try", "need", "remember"
+                                    ),
+                                    to = c("DECLARATIVE", "IMPERATIVE", "yao\n'want'", "kan\n'see'", "shuo\n'say'",
+                                           "kankan\n'see-DUP'", "jiang\n'say'", "xiang\n'think/want'", "zhidao\n'know'",
+                                           "jiao\n'call/get'", "xihuan\n'like'", "gaosu\n'tell'", "bang\n'help'", 
+                                           "rang\n'let'", "juede\n'feel'",
+                                           "want", "see", "know", "think", "say",
+                                           "like", "tell", "try", "need", "remember"
+                                           )
+)
 #tikz('~/experiments/MainClauseModel/bin/embclause_prob.tikz', width=5.5, height=4)
-ggplot(filter(repmeans.emb, has.embpred), aes(x=prop, y=logistic(value), shape=variable)) + 
+ggplot(filter(repmeans.emb %>% 
+                filter(verb != "vacuous-verb"
+                  & verb != "IMPERATIVE" & verb !="DECLARATIVE"
+                  & verb != "bang 'help'" & verb != "rang 'let'"
+                  & verb != "kankan 'see-DUP'"
+      ), has.embpred), aes(x=prop, y=logistic(value), color = variable)) + 
   geom_point(size=1.5) +
   facet_wrap(~verb, ncol=5) + 
   scale_shape_manual(name='', values = c(16, 1)) +
-  scale_x_continuous(name='Proportion of sentences with embedded clause', breaks=c(0, .5, 1), labels=c(0, .5, 1)) +
+  labs(color='Semantic\nfeature') + # legend name
+  scale_x_log10(name='Proportion of sentences with embedded clause', 
+                     breaks = c(0, 0.1, 0.5, 1), 
+                     labels=c('~0', 0.1, 0.5, '~1'))+
   scale_y_continuous(name='Probability of semantic component', breaks=logistic(c(0.0001, 0.1, 0.5, 0.9, 0.9999)), labels=c('~0', 0.1, 0.5, 0.9, '~1'))# +
 #theme(axis.text.x=element_text(angle=45, hjust=1))
 #dev.off()
+
+# Bar plot version
+ggplot(filter(repmeans.emb %>% 
+                filter(verb != "vacuous-verb"
+                       & verb != "IMPERATIVE" & verb !="DECLARATIVE"
+                       & verb != "bang\n'help'" & verb != "rang\n'let'"
+                       & verb != "kankan\n'see-DUP'"
+                ), has.embpred), aes(x=verb, y=prop)) + 
+  geom_boxplot(outlier.shape = NA) + geom_jitter(width = 0.2) +
+  scale_y_log10(name='Proportion of sentences with embedded clause', 
+                breaks = c(0.001, 0.1, 0.25, 0.5, .9999), 
+                labels = c('~0', 0.1, .25, .5, '~1')) +
+  xlab('Verb')
 
 # plot projection
 ### PART THREE: PROJECTION

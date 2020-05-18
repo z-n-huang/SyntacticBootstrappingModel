@@ -1,5 +1,4 @@
 library(readr)
-library(plyr)
 library(dplyr)
 library(reshape2)
 library(ggplot2)
@@ -17,8 +16,12 @@ theme_set(theme_classic()+ theme(axis.line.x = element_line(colour = 'black', si
 # load data
 ## English
 suff = "22wnopen" # "10nopen" "10wpenall", "10wpensel"
-verbreps_results <- read_csv(paste("results/feb2020 draft/verbreps_resultsen ", suff, ".csv", sep = "")) #  w(/o) " 10wpen"
-projection_results <- read_csv(paste("results/feb2020 draft/projection_resultsen ", suff, ".csv", sep = ""))
+#verbreps_results <- read_csv(paste("results/feb2020 draft/verbreps_resultsen ", suff, ".csv", sep = "")) #  w(/o) " 10wpen"
+#projection_results <- read_csv(paste("results/feb2020 draft/projection_resultsen ", suff, ".csv", sep = ""))
+
+verbreps_results <- read_csv("results/cross-validate/verbreps_resultsen 0000.csv")
+projection_results <- read_csv("results/cross-validate/projection_resultsen 0000.csv")
+
 gleason_data <- read_csv("data/gleason_data.csv")
 verbreps_results <- verbreps_results %>% filter(verb != "IMPERATIVE" & verb!="DECLARATIVE")
 
@@ -42,7 +45,6 @@ verbreps_results <- verbreps_results %>% filter(verb != "tell")
 ## END LOADING MANDARIN
 
 # plot verb representations
-
 repmeans <- group_by(verbreps_results, verb, sentence, child) %>% 
   summarise(belief=mean(`0`), desire=mean(`1`)) %>% filter(!((sentence%%10)>0))
 
@@ -58,21 +60,33 @@ verb.counts <- filter(verb.counts, verb %in% unique(repmeans.summ$verb))
 
 repmeans.summ$verb <- ordered(repmeans.summ$verb, levels=verb.counts$verb)
 
-repmeans.summ$verbPlot <- mapvalues(repmeans.summ$verb, 
-                                    from = c("DECLARATIVE", "IMPERATIVE", "要", "看", "说",
-                                             "看看", "讲", "想", "知道", "叫",
-                                             "喜欢", "告诉", "帮", "让", "觉得",
-                                             "want", "see", "know", "think", "say",
-                                             "like", "tell", "try", "need", "remember"
-                                    ),
-                                    to = c("DECLARATIVE", "IMPERATIVE", "yao 'want' (D)", "kan 'see' (B)", "shuo 'say' (B)",
-                                           "kankan 'see-DUP' (B)", "jiang 'say' (B)", "xiang 'think/want' (B/D)", "zhidao 'know' (B)",
-                                           "jiao 'call/get' (D)", "xihuan 'like' (D)", "gaosu 'tell' (B)", "bang 'help' (O)", 
-                                           "rang 'let' (O)", "juede 'feel' (B)",
-                                           "want (D)", "see (B)", "know (B)", "think (B)", "say (B)",
-                                           "like (D)", "tell (B/D)", "try (D)", "need (D)", "remember (B)"
-                                    )
-) 
+repmeans.summ$verbPlot <- recode(repmeans.summ$verb, 
+                                 DECLARATIVE = "DECLARATIVE",
+                                 IMPERATIVE = "IMPERATIVE",
+                                 "要" = "yao 'want' (D)",
+                                 "看" = "kan 'see' (B)", 
+                                 "说" = "shuo 'say' (B)",
+                                 "看看" = "kankan 'see-DUP' (B)", 
+                                 "讲" = "jiang 'say' (B)",
+                                 "想" = "xiang 'think, want' (B, D)", 
+                                 "知道" = "zhidao 'know' (B)", 
+                                 "叫" = "jiao 'call/get' (D)",
+                                 "喜欢" = "xihuan 'like' (D)",  
+                                 "告诉" = "gaosu 'tell' (B)", 
+                                 "帮" = "bang 'help' (O)", 
+                                 "让" = "rang 'let' (O)", 
+                                 "觉得" = "juede 'feel' (B)",
+                                 "want" = "want (D)", 
+                                 "see" = "see (B)", 
+                                 "know" = "know (B)", 
+                                 "think" = "think (B)", 
+                                 "say" = "say (B)",
+                                 "like" = "like (D)",
+                                 "tell" = "tell (B/D)", 
+                                 "try" = "try (D)", 
+                                 "need" = "need (D)", 
+                                 "remember" = "remember (B)"
+                  ) 
 
 repmeans.summ <- repmeans.summ %>% filter(verbPlot != "<NA>")
 

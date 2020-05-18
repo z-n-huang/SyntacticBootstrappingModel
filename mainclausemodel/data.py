@@ -72,7 +72,8 @@ class MainClauseData(object):
         if self._nclausetype:
             realverbs = [v for v in self._data.verb.unique() if v not in self._cclausetype]
             verbcats = list(self._cclausetype)+realverbs
-            self._data.verb = self._data.verb.astype('category', categories=verbcats)
+            # self._data.verb = self._data.verb.astype('category', categories=verbcats) # original
+            self._data.verb = self._data.verb.astype('category', pd.api.types.CategoricalDtype(categories=verbcats)) # updated because original version of specifying as type is deprecated
         else:
             self._data.verb = self._data.verb.astype('category')
 
@@ -171,8 +172,8 @@ def main(datapath='../bin/data/gleason_data.csv', featurepath='../bin/data/mainc
     
     if separate_children:
         data = {}
-        
-        for c in d.child.unique()[:10]:
+        # Cross-validate weights using 1st 5 subcorpora (0:5) in Gleason. Test on 10 subcorpora, 6-15 (i.e. [5:15])
+        for c in d.child.unique()[:5]:
             d_proc = preprocess_features(d[d.child==c])
             print('Child:', c, d[d.child==c].shape)
             data[c] = MainClauseData(d_proc, f)

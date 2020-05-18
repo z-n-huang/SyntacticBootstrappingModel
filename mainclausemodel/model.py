@@ -47,6 +47,9 @@ class MainClauseModel(object):
 
         nonparametric : bool
             Whether to use a nonparametric prior
+
+        divergence_weight : float (0 to negative infinity) (ADDED)
+            How much to weight the either-or bias. If 0, no either-or bias.
         '''
 
         self.nlatfeats = nlatfeats
@@ -57,6 +60,7 @@ class MainClauseModel(object):
         self.delta = delta
         self.orthogonality_penalty = orthogonality_penalty
         self.nonparametric = nonparametric
+        self.divergence_weight = -0. # For cross-validation: -0.1, -0.5, -1, -5, -10, -100
         
         self._validate_params()
 
@@ -133,7 +137,7 @@ class MainClauseModel(object):
         self._featureprob = 1.-T.prod(1.-softand, axis=1)
 
     # ADDED: divergence function. Calculates JS-divergence (cf. SciPy version which yields the square root value)
-    def _get_divergence(self):
+    def _get_js_divergence(self):
         vr = self._verbreps
         assertProb = vr[:, 0]
         requestProb = vr[:, 1]
@@ -151,7 +155,24 @@ class MainClauseModel(object):
         js = T.set_subtensor(js[1], 0.)
 
         return js
-		                
+		
+    # ADDED: divergence function. Calculates KL-divergence
+    def _get_kl_divergence(self):
+        vr = self._verbreps
+        assertProb = vr[:, 0]
+        requestProb = vr[:, 1]
+        kl_assert = (assertProb * T.log(assertProb / (1-requestProb)) 
+                    + (1-assertProb) * T.log((1-assertProb) / requestProb))
+        kl_request = ((1-requestProb) * T.log((1-requestProb) / assertProb) 
+                + requestProb * T.log(requestProb / (1-assertProb)))
+        kl = ((kl_assert + kl_request) / 2 / np.log(2))**1 
+        # Above code leads to NaN error for verbs 0 and 1 (DECLARATIVE & IMPERATIVE), probably because of how Theano deals with floating point representations???
+        # These should be 0. Stipulate them as such.
+        # cf. https://stackoverflow.com/questions/31919818/theano-sqrt-returning-nan-values. 
+        kl = T.set_subtensor(kl[0], 0.) # try ... js[tuple([0,])], 0...
+        kl = T.set_subtensor(kl[1], 0.)
+
+        return kl                
     def _initialize_loss(self):
 
         self._log_projection_prior = (self.gamma-1.)*T.log(self._projection) +\
@@ -216,12 +237,19 @@ class MainClauseModel(object):
                                                       self.data.n('feature'))
         self._total_loss = self._prior+self._orthogonality_penalty+self._total_ll
         self._itr = T.ivector('itr')
-        self._divergence = T.mean(self._get_divergence()[self.data.verb][self._itr])*-1 # ADDED. Try adding "[self.data.verb][self._itr]", so that the model only computes JS for the observed predicates
-        # T.mean(self._get_divergence()) # Option A: mean of ALL divergences
-        # T.mean(self._get_divergence()[self.data.verb][self._itr]) # Option B: mean of divergences for observed verbs
+        
+        # Option A: mean of JS divergence for observed verbs
+        self._divergence = T.mean(self._get_js_divergence()[self.data.verb][self._itr])*self.divergence_weight
+        
+        # Option B: mean of KL divergence for observed verbs
+        # self._divergence = T.mean(self._get_kl_divergence()[self.data.verb][self._itr])*self.divergence_weight
+        
+        # Other options:
+        # T.mean(self._get_js_divergence()) # Option A1: mean of ALL divergences, regardless of verbs observed for the particular utterance
+        # T.mean(self._get_kl_divergence()) # Option B1: mean of ALL divergences, regardless of verbs observed for the particular utterance
         self._itr_ll = T.sum(self._ll_per_feature[self._itr])/self.data.n('feature')
         self._itr_loss = self._prior+self._orthogonality_penalty+self._itr_ll #+ self._divergence
-        #ADDED # Subtract divergence. Effectively, we are taking the raw log-likelihood (_ll_per_feature), a negative value, and adjusting it by this divergence score, a positive value. Since the model tries to maximize log-likelihood, we want the adjusted log-likelihood to be lower when the divergence score is high. One way to do so is subtract divergence from log-likelihood.
+        #ADDED # Subtract divergence. Effectively, we are taking the raw log-likelihood (_ll_per_feature), a negative value, and adjusting it by this divergence score. Both JSD and KLD yield a positive value. Since the model tries to maximize log-likelihood, we want the adjusted log-likelihood to be lower when the divergence score is high. One way to do so is adjust divergence with a negative weight, effectively subtracting divergence from log-likelihood.
                          
     def _initialize_updaters(self, stochastic):
         update_dict_ada = []

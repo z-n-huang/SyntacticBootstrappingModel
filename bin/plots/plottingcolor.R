@@ -19,8 +19,38 @@ suff = "22wnopen" # "10nopen" "10wpenall", "10wpensel"
 #verbreps_results <- read_csv(paste("results/feb2020 draft/verbreps_resultsen ", suff, ".csv", sep = "")) #  w(/o) " 10wpen"
 #projection_results <- read_csv(paste("results/feb2020 draft/projection_resultsen ", suff, ".csv", sep = ""))
 
-verbreps_results <- read_csv("results/cross-validate/verbreps_resultsen 0000.csv")
-projection_results <- read_csv("results/cross-validate/projection_resultsen 0000.csv")
+v2 <- read_csv("C:/Users/znhua/Documents/raspberry transfers/results 5-15 1e0 x10 en may19/verbreps_resultsen 5-15 1e0 2.csv")
+v3 <- read_csv("C:/Users/znhua/Documents/raspberry transfers/results 5-15 1e0 x10 en may19/verbreps_resultsen 5-15 1e0 3.csv")
+v4 <- read_csv("C:/Users/znhua/Documents/raspberry transfers/results 5-15 1e0 x10 en may19/verbreps_resultsen 5-15 1e0 4.csv")
+v5 <- read_csv("C:/Users/znhua/Documents/raspberry transfers/results 5-15 1e0 x10 en may19/verbreps_resultsen 5-15 1e0 5.csv")
+v2$itr <- ifelse(v2$itr == 0, 2, 3)
+v3$itr <- ifelse(v3$itr == 0, 4, 5)
+v4$itr <- ifelse(v4$itr == 0, 6, 7)
+v5$itr <- ifelse(v5$itr == 0, 8, 9)
+
+verbreps_results <- rbind(
+  v1 <- read_csv("C:/Users/znhua/Documents/raspberry transfers/results 5-15 1e0 x10 en may19/verbreps_resultsen 5-15 1e0 1.csv"),
+  v2, v3, v4, v5
+)
+
+p2 <- read_csv("C:/Users/znhua/Documents/raspberry transfers/results 5-15 1e0 x10 en may19/projection_resultsen 5-15 1e0 2.csv")
+p3 <- read_csv("C:/Users/znhua/Documents/raspberry transfers/results 5-15 1e0 x10 en may19/projection_resultsen 5-15 1e0 3.csv")
+p4 <- read_csv("C:/Users/znhua/Documents/raspberry transfers/results 5-15 1e0 x10 en may19/projection_resultsen 5-15 1e0 4.csv")
+p5 <- read_csv("C:/Users/znhua/Documents/raspberry transfers/results 5-15 1e0 x10 en may19/projection_resultsen 5-15 1e0 5.csv")
+p2$itr <- ifelse(p2$itr == 0, 2, 3)
+p3$itr <- ifelse(p3$itr == 0, 4, 5)
+p4$itr <- ifelse(p4$itr == 0, 6, 7)
+p5$itr <- ifelse(p5$itr == 0, 8, 9)
+
+
+projection_results <- rbind(
+  read_csv("C:/Users/znhua/Documents/raspberry transfers/results 5-15 1e0 x10 en may19/projection_resultsen 5-15 1e0 1.csv"),
+  p2, p3, p4, p5
+)
+
+read_csv("C:/Users/znhua/Documents/raspberry transfers/results 5-15 1e0 x10 en may19/verbreps_resultsen 5-15 1e0 1.csv")
+verbreps_results <- read_csv("C:/Users/znhua/Documents/raspberry transfers/verbreps_resultsen 5e0.csv")
+projection_results <- read_csv("C:/Users/znhua/Documents/raspberry transfers/projection_resultsen 5e0.csv")
 
 gleason_data <- read_csv("data/gleason_data.csv")
 verbreps_results <- verbreps_results %>% filter(verb != "IMPERATIVE" & verb!="DECLARATIVE")
@@ -112,8 +142,8 @@ ggplot(repmeans.summ
 #dev.off()
 
 ### PART TWO: Probability of semantics vs. frequency of clausal complements
-gleason_data$has.embpred <- gleason_data$embpred!='NONE'
-gleason_data$has.embpred <- gleason_data$embpred!='FALSE'
+gleason_data$has.embpred <- gleason_data$embpred!='NONE' # English
+gleason_data$has.embpred <- gleason_data$embpred!='FALSE' # MC version
 
 emb.counts <- filter(gleason_data, verb %in% unique(repmeans.summ$verb)) %>%
   count(child, verb, has.embpred) %>% group_by(child, verb) %>% mutate(tot=sum(n), prop=n/tot)
@@ -128,21 +158,35 @@ repmeans.emb.cast$dorb <- 1-(1-repmeans.emb.cast$belief)*(1-repmeans.emb.cast$de
 
 logistic <- function(p) log(p)-log(1-p)
 
-repmeans.emb$verb <- mapvalues(repmeans.emb$verb, 
-                                    from = c("DECLARATIVE", "IMPERATIVE", "要", "看", "说",
-                                             "看看", "讲", "想", "知道", "叫",
-                                             "喜欢", "告诉", "帮", "让", "觉得",
-                                             "want", "see", "know", "think", "say",
-                                             "like", "tell", "try", "need", "remember"
-                                    ),
-                                    to = c("DECLARATIVE", "IMPERATIVE", "yao\n'want'", "kan\n'see'", "shuo\n'say'",
-                                           "kankan\n'see-DUP'", "jiang\n'say'", "xiang\n'think/want'", "zhidao\n'know'",
-                                           "jiao\n'call/get'", "xihuan\n'like'", "gaosu\n'tell'", "bang\n'help'", 
-                                           "rang\n'let'", "juede\n'feel'",
-                                           "want", "see", "know", "think", "say",
-                                           "like", "tell", "try", "need", "remember"
-                                           )
-)
+repmeans.emb$verb <- recode(repmeans.emb$verb, 
+                                DECLARATIVE = "DECLARATIVE",
+                                IMPERATIVE = "IMPERATIVE",
+                                "要" = "yao 'want' (D)",
+                                "看" = "kan 'see' (B)", 
+                                "说" = "shuo 'say' (B)",
+                                "看看" = "kankan 'see-DUP' (B)", 
+                                "讲" = "jiang 'say' (B)",
+                                "想" = "xiang 'think, want' (B, D)", 
+                                "知道" = "zhidao 'know' (B)", 
+                                "叫" = "jiao 'call/get' (D)",
+                                "喜欢" = "xihuan 'like' (D)",  
+                                "告诉" = "gaosu 'tell' (B)", 
+                                "帮" = "bang 'help' (O)", 
+                                "让" = "rang 'let' (O)", 
+                                "觉得" = "juede 'feel' (B)",
+                                "want" = "want (D)", 
+                                "see" = "see (B)", 
+                                "know" = "know (B)", 
+                                "think" = "think (B)", 
+                                "say" = "say (B)",
+                                "like" = "like (D)",
+                                "tell" = "tell (B/D)", 
+                                "try" = "try (D)", 
+                                "need" = "need (D)", 
+                                "remember" = "remember (B)"
+                               ) 
+                               
+
 #tikz('~/experiments/MainClauseModel/bin/embclause_prob.tikz', width=5.5, height=4)
 ggplot(filter(repmeans.emb %>% 
                 filter(verb != "vacuous-verb"

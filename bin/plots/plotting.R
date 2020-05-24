@@ -11,9 +11,9 @@ theme_set(theme_classic()+ theme(axis.line.x = element_line(colour = 'black', si
 
 # load data
 
-verbreps_results <- read_csv("~/experiments/MainClauseModel/bin/verbreps_results.csv")
-projection_results <- read_csv("~/experiments/MainClauseModel/bin/projection_results.csv")
-gleason_data <- read_csv("~/experiments/MainClauseModel/bin/gleason_data.csv")
+verbreps_results <- read_csv("../../bin/results/cross-validate/verbreps_resultsen 10-1.csv")
+projection_results <- read_csv("../../bin/results/cross-validate/projection_resultsen 10-1.csv")
+gleason_data <- read_csv("../../bin/data/gleason_data.csv")
 
 # plot verb representations
 

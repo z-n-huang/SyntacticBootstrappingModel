@@ -60,7 +60,7 @@ class MainClauseModel(object):
         self.delta = delta
         self.orthogonality_penalty = orthogonality_penalty
         self.nonparametric = nonparametric
-        self.divergence_weight = -0. # For cross-validation: -0.1, -0.5, -1, -5, -10, -100
+        self.divergence_weight = -1e0 # For cross-validation: -0.1, -0.5, -1, -5, -10, -100
         
         self._validate_params()
 

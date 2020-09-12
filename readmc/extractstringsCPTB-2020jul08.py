@@ -4,6 +4,7 @@ import pandas as pd
 import os
 
 ### Created July 2020
+### Modified slightly Sep 2020
 ### PART ONE
 ### READ CTB TREES
 
@@ -201,21 +202,21 @@ def checkQmorphology(d, sentProperties):
                  '干嘛', '干吗', '为何', '为什么', '奈何'
                  ]:
                 sentProperties['Qlex'].append(st.leaves()[0])
-                sentProperties['Qmorphology'] = 1
+                sentProperties['Qmorphology'] = 'Q/defWh'
         # A-not-A
         if 'VNV' in st.label():
             sentProperties['Qlex'].append(st.label())
-            sentProperties['Qmorphology'] = 2
+            sentProperties['Qmorphology'] = 'Q/AnotA'
         # Other wh-words
         elif st.label().endswith('WH'):
-            sentProperties['Qmorphology'] = 3
+            sentProperties['Qmorphology'] = 'Q/othWh'
 
 def getBinaryFeats(sentProperties):
     sentProperties['hasNegation'] = len(sentProperties['negation']) > 0
     modalWithoutBie = []
     for mod in sentProperties['modal']:
         if mod == '别':
-            sentProperties['Qmorphology'] = 4
+            sentProperties['Qmorphology'] = 'PROH/bie'
         else:
             modalWithoutBie.append(mod)
     sentProperties['hasModalWithoutBie'] = len(modalWithoutBie) > 0
@@ -235,26 +236,47 @@ def genSentProperties(sentProperties):
     
     
 sentencesFeats = []
-for treeIndex, tree in enumerate(trees):
-    treeLabel = tree[(0)].label() 
+for treeIndex, tree in enumerate(trees[51383:51384]):
+    mainClause = []
+    treeLabel = tree[(0)].label()
+    # Don't analyze main clauses that are headlines and fragments
     if 'HLN' in treeLabel or treeLabel.endswith('FRAG'):
         pass
     else:
-        att = 'DeclMC'
-        if treeLabel.endswith('Q'):
-            att = 'Q'
-        elif treeLabel.endswith('IMP'):
-            att = 'IMP'
-        sentProperties = {'treeIndex': treeIndex,
-                          'leafIndex': 0,
-                          's': joinLeaves(tree),
-                          'att': att,
-                          }
-        genSentProperties(sentProperties)
-        sentProperties['clause'] = treeLabel
-        checkClause(tree[(0)], sentProperties)
-        sentencesFeats.append(sentProperties)
-    
+        mainClauses = []
+        # Check to see if a main clause is a set of conjoined clauses
+        # i.e. immediately dominates a set of clause-like constituents
+        # We exclude VP, because this would incorrectly include VPs inside main clauses
+        # Add these constituents to mainClauses
+        for i, d in enumerate(tree[(0)]):
+            try:
+                if d.label().startswith(('IP', 'CP')) and isComplement(d):
+                    mainClauses.append(d)
+            except:
+                print(treeIndex)
+        # There are only conjuncts if there are more than two clauses
+        # If there is only one 'conjunct', replace mainClauses with only the main clause
+        if len(mainClauses) < 2:
+            mainClauses = [ tree[(0)] ]
+            
+        for i, mc in enumerate(mainClauses):
+            mcTreeLabel = mc.label()
+            att = 'DeclMC'
+            if mcTreeLabel.endswith('Q'):
+                att = 'Q'
+            elif mcTreeLabel.endswith('IMP'):
+                att = 'IMP'
+            sentProperties = {'treeIndex': treeIndex,
+                              'leafIndex': 0,
+                              's': joinLeaves(mc),
+                              'att': att,
+                              'clauseSeen': i > 0 # False if > 0
+                              }
+            genSentProperties(sentProperties)
+            sentProperties['clause'] = mcTreeLabel
+            checkClause(mc, sentProperties)
+            sentencesFeats.append(sentProperties)
+        
     for leafIndex, leaf in enumerate(tree.leaves()):
         for att in attitudeList:
             # if the attitude morpheme is a (proper) substring of the lexical item
@@ -266,39 +288,45 @@ for treeIndex, tree in enumerate(trees):
                 # filter for verbs
                 
                 if attPOS.startswith('V'):
-                    sentProperties = {'treeIndex': treeIndex,
-                                      'leafIndex': leafIndex,
-                                      's': joinLeaves(tree),
-                                      'att': leaf
-                                      }
-                    genSentProperties(sentProperties)
                     verbSeen = False
                     clauseSeen = False
                     NPseen = False
+                    NPLabel = ''
                     for d in VP:
                         #print(joinLeaves(d), 999, notNull(d), clauseSeen)
                         if d.leaves() == [leaf]:
                             verbSeen = True
                         if verbSeen:
-                            #print(999, notNull(d), clauseSeen)
-                            # For ease of analysis, we restrict ourselves to the first NP/clausal argument
-                            if (d.label().startswith(('VP', 'IP', 'CP')) and isComplement(d)
-                                and notNull(d)
-                                and clauseSeen == False):
-                                #print(clauseSeen, d.label())
-                                clauseSeen = True
-                                genSentProperties(sentProperties)
-                                sentProperties['clause'] = d.label()
-                                checkClause(d, sentProperties)
-                                
                             if d.label().startswith(('NP')):
                                 NPSeen = True
-                                sentProperties['np'] = d.label()
-                    sentencesFeats.append(sentProperties)
+                                NPLabel = d.label()
+                                
+                            #print(999, notNull(d), clauseSeen)
+                            if (d.label().startswith(('VP', 'IP', 'CP')) and isComplement(d)
+                                and notNull(d)
+                                # Do we restrict ourselves to the first NP/clausal argument? If yes, uncomment
+                                #and clauseSeen == False
+                                ):
+                                #print(clauseSeen, d.label())
+                                sentProperties = {'treeIndex': treeIndex,
+                                      'leafIndex': leafIndex,
+                                      's': joinLeaves(tree),
+                                      'att': leaf
+                                      }
+                                
+                                genSentProperties(sentProperties)
+                                sentProperties['np'] = NPLabel
+                                sentProperties['clause'] = d.label()
+                                sentProperties['clauseSeen'] = clauseSeen
+                                clauseSeen = True
+                                checkClause(d, sentProperties)
+                                sentencesFeats.append(sentProperties)
+
+
 
 s = []
 for i, sentProperties in enumerate(sentencesFeats):
     if 'clause' in sentProperties.keys():
         sPcleaned = getBinaryFeats(sentProperties)
         s.append(sPcleaned)
-pd.DataFrame(s).to_csv("ctb-jul2020.txt", index = False)
+pd.DataFrame(s).to_csv("ctb-bootstrap-sep2020-allconjs.txt", index = False)

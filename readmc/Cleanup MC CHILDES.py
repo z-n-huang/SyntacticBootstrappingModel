@@ -229,6 +229,7 @@ def processFolder(folder):
     allMainCFilename = []
     # check if the processing/cleaning works, and to put all cleaned clauses into allMainC
     for file, utterances in filesUtterances.items():
+        allMainC += [file.replace('\\', '-')]
         for utterance in utterances:
             if (utterance['speaker'] != "*CHI"
                 ):

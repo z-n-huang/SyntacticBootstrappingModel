@@ -63,20 +63,29 @@ for f in [
           'Zhou1',
           'Zhou2',
           'Zhou3',
-          'ZhouAssessment',
+          'ZhouAssessment', #exclude all files starting with zhou2
           'zhoudinner'
            # exclude ZhouNarrative, as it's mostly just the teacher asking questions
            ]:
     wtList = []
     with open(wkdir+f+'-wtall.txt', 'r', encoding = 'utf') as reader:
         for line in reader:
+            readLines = True
             if line != "\n":
-                wtList.append((("r/r "+line).replace("\n","")).split(" "))
+                if f == 'ZhouAssessment':
+                    if 'zhou2' in line.lower():
+                        readLines = False
+                    # "punct(ZhouAssessment ..." marks the start of a new file. Check if this file bears zhou2 in its name
+                    elif ("punct(ZhouAssessment" in line) and 'zhou2' not in line.lower():
+                        readLines = True
+                
+                    if readLines:
+                        wtList.append((("r/r "+line).replace("\n","")).split(" "))
     
     tdList = []
     with open(wkdir+f+'-tdall.txt', 'r', encoding = 'utf') as reader:
         deps = []
-        for line in reader:    
+        for line in reader:
             if line == "\n":
                 tdList.append(deps)
                 deps = []

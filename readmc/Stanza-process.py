@@ -6,7 +6,7 @@ Created on Thu Sep 10 16:50:22 2020
 """
 import glob
 import stanza
-
+import pandas as pd
 """
 stanza.download('zh')   # This downloads the English models for the neural pipeline
 stanza.download('zh-hant')   # This downloads the English models for the neural pipeline
@@ -27,7 +27,7 @@ aspectSuffix = ["了", "过", "着"]
 aspectPrefix = ["在", "没有", "没"]
 neg = ["不", "没", "没有"]
 wh = ["什么", "谁", "哪",  "哪里", "哪儿", "哪边",
-      "为什么", "怎么", "怎样", "怎么样",
+      "为什么", "怎么", "怎样", "怎么样", "怎么办",
       "为何", "如何", "多少",
       "干嘛", "干吗", "干什么", "做么", "啥"]
 
@@ -85,7 +85,7 @@ s_str = "那 你 以前 睡 过 觉 了 是 不 是 今天 就 不 用 睡觉 �
 s_str = "你 在 干嘛  ?"
 s_str = "我 是 谁 的 老婆 啊 ?"
 
-aux = []
+
 
 xcomp = ['要', '说', '去', '来', '请', '继续', '用',]
 
@@ -93,16 +93,16 @@ wkdir = r"C:/Users/znhua/bigUSB/corpora/stanford-parser-full-2018-10-17/data2/"
 
 allFiles = glob.glob(wkdir + "*.txt", recursive = True) 
 
-for filename in allFiles[:-2]:
+for filename in allFiles[10:11]:
     #file = filename.replace(wkdir, "")
     with open(filename, "r", encoding = "utf8") as fd:
         raw = fd.readlines()
-
-
+filename
+len(raw)
 heads = {}
 update_heads = {}
 all_deps = []
-for s_index, sentence_string in enumerate(raw[:2000]):
+for s_index, sentence_string in enumerate(raw[:-1]):
     if s_index%100 == 0:
         print(s_index)
     s_str = sentence_string.replace('\n', '')
@@ -157,6 +157,7 @@ for s_index, sentence_string in enumerate(raw[:2000]):
                 # Go through the dependencies
                 for dep in deps:
                     if len(dep.keys()) > 1:
+                        xA = False
                         if (dep['pos'] in ['MD', 'VV', 'JJ'] 
                             and (dep['ind']-1 +2) <= len(s.words)):
                             xA = ( s.words[dep['ind']-1 +1].text in ['不', '没', '一'] 
@@ -168,7 +169,7 @@ for s_index, sentence_string in enumerate(raw[:2000]):
                             # Lexical items in these relations should come after their heads
                             (
                              dep['ind'] < head_ind and dep['type'] in ['aux', 'xcomp', 'ccomp', 'acl']
-                                and dep['lex'] in ['要', '觉得', '知道', '看', '有']
+                                and dep['lex'] in ['要', '觉得', '知道', '看', '有'] +xcomp
                                 and xA == False
                                 )
                             # for AxA, especially for verbs, since they embed.
@@ -259,7 +260,8 @@ for s_index, sentence_string in enumerate(raw[:2000]):
 
 
 
-def check_deps(update_heads, s_ind = 0, obj = -1, has_clause = True, head_ind = 0, pred_ind = -1):
+def check_deps(update_heads, s_ind = 0, obj = -1, has_clause = True, 
+               head_ind = 0, pred_ind = -1):
     
     head_lex = 0
     if head_ind > 0:
@@ -289,21 +291,34 @@ def check_deps(update_heads, s_ind = 0, obj = -1, has_clause = True, head_ind = 
             features['force'] = 'Q' 
     
     features['pred'] = update_heads['sentence'][pred_ind-1]
+    if features['pred'] in wh:
+        features['has_whAxA'] += 'w'
     if update_heads['pos'][pred_ind-1] == 'VV':
         features['pred'] += 'v'
-        #features['clausal_ind'] = update_heads['sentence'][pred_ind-1]
-        
-    deps = update_heads[pred_ind]
     
+        #features['clausal_ind'] = update_heads['sentence'][pred_ind-1]
+    try:
+        deps = update_heads[pred_ind]
+    except:
+        deps = [{'type': 'None', 'lex': 'None', 'pos': 'None', 'ind': -1}]
+    
+    subj_track = {}
     for dep in deps:
+        #if len(dep) > 0:
+        #   print(dep)
         if dep == {'AxA': 'AnegA'}:
             features['has_whAxA'] += 'AnegA'
+        elif dep == {'AxA': 'AoneA'}:
+            features['has_whAxA'] += 'AoneA'
         else:
             if ('nsubj' in dep['type'] 
                 or 'csubj' in dep['type'] and dep['lex'] not in [',']):
                 features['subj'] = dep['lex']
-    
-                
+                if (features['head'] == '告诉' and 'nsubj' in dep['type'] ):
+                    subj_track[ dep['ind'] ] = dep
+                    if len(subj_track) > 1:
+                        obj = subj_track[ min(subj_track.keys()) ]
+                        features['has_obj'] = True
             if dep['lex'] in ['不', '没', '没有']:
                 features['neg'] = dep['lex']
             # bie
@@ -348,7 +363,7 @@ def check_deps(update_heads, s_ind = 0, obj = -1, has_clause = True, head_ind = 
                     #print(obj)
                 else:
                     has_clause = True
-                    
+                
     if features['clausal_ind'] in update_heads.keys():
         #print(features['clausal_ind'])
         pred_entries.append(check_deps(update_heads, s_ind, obj, has_clause, pred_ind, features['clausal_ind']))
@@ -357,9 +372,9 @@ def check_deps(update_heads, s_ind = 0, obj = -1, has_clause = True, head_ind = 
     
 
 pred_entries = []
-for s_ind, s_dep in enumerate(all_deps[:200]):
+for s_ind, s_dep in enumerate(all_deps):
     pred_entries.append(check_deps(s_dep, s_ind))
 
-#import pandas as pd
+filename
 pdpe = pd.DataFrame(pred_entries)
-pdpe.to_csv('test-stanza-chang1.txt', encoding ='utf8', index = False)
+pdpe.to_csv('test-stanza-zhounarratives.txt', encoding ='utf8', index = False)

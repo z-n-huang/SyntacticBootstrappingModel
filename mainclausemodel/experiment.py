@@ -26,31 +26,38 @@ class MainClauseExperiment(object):
                 m[i].fit(self._data[c])
 
     @property
-    def results(self):
+    def results(self):  # NH: add data about feature probs for validation
         try:
-            return self._results_verbreps, self._results_projection
+            return self._results_verbreps, self._results_projection, self._featureprobs
         except AttributeError:        
             results_verbreps = []
             results_projection = []
+            results_feature_probs = [] # NH: added
 
             for c, m in self._models.items():
                 for i in np.arange(self._niters):        
                     vh = m[i].verbreps_history
                     ph = m[i].projection_history
+                    fp = m[i].feature_prob # NH: added
+                    
 
                     vh['child'] = c
                     ph['child'] = c
+                    fp['child'] = c # NH: added
 
                     vh['itr'] = i
                     ph['itr'] = i
+                    fp['itr'] = i # NH: added
 
                     results_verbreps.append(vh)
                     results_projection.append(ph)
+                    results_feature_probs.append(fp)
 
             self._results_verbreps = pd.concat(results_verbreps, sort = True) # ADDED sort = True 
             self._results_projection = pd.concat(results_projection, sort = True) # ADDED sort = True 
+            self._results_feature_probs = pd.concat(results_feature_probs, sort = True) # NH: added
 
-            return self._results_verbreps, self._results_projection
+            return self._results_verbreps, self._results_projection, self._results_feature_probs
 
 def main():
     import data, datamc
@@ -69,7 +76,7 @@ def main():
     exp = MainClauseExperiment(data)
     exp.run()
 
-    verbreps, projection = exp.results
+    verbreps, projection, results_feature_probs = exp.results # NH: added feature probs
 
     verbs = ['want', 'see', 'know', 'think', 'say', 'like', 'tell', 'try', 'need', 'remember',
              'DECLARATIVE', 'IMPERATIVE', '要', '看', '说', '看看', '讲', '想', '知道', '叫', '喜欢', '告诉', '帮', '让', '觉得',]
@@ -78,6 +85,7 @@ def main():
     
     verbreps[verbreps.verb.isin(verbs)].to_csv('../bin/results/verbreps_results'+lg+'.csv', index=False)
     projection.to_csv('../bin/results/projection_results'+lg+'.csv', index=False)
+    results_feature_probs.to_csv('../bin/results/featureprobs_results'+lg+'.csv', index=False) # NH: added feature probs
 
     return exp
 

@@ -16,7 +16,7 @@ class MainClauseExperiment(object):
                             for _ in np.arange(self._niters)]
                         for c in self._data.keys()}
 
-    def run(self, niters=1): #DEFAULT 10
+    def run(self, niters=10): #DEFAULT 10
         self._niters = niters
         self._initialize_models()
         

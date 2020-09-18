@@ -248,7 +248,7 @@ class MainClauseModel(object):
         # T.mean(self._get_js_divergence()) # Option A1: mean of ALL divergences, regardless of verbs observed for the particular utterance
         # T.mean(self._get_kl_divergence()) # Option B1: mean of ALL divergences, regardless of verbs observed for the particular utterance
         self._itr_ll = T.sum(self._ll_per_feature[self._itr])/self.data.n('feature')
-        self._itr_loss = self._prior+self._orthogonality_penalty+self._itr_ll #+ self._divergence
+        self._itr_loss = self._prior+self._orthogonality_penalty+self._itr_ll + self._divergence
         #ADDED # Subtract divergence. Effectively, we are taking the raw log-likelihood (_ll_per_feature), a negative value, and adjusting it by this divergence score. Both JSD and KLD yield a positive value. Since the model tries to maximize log-likelihood, we want the adjusted log-likelihood to be lower when the divergence score is high. One way to do so is adjust divergence with a negative weight, effectively subtracting divergence from log-likelihood.
                          
     def _initialize_updaters(self, stochastic):
@@ -297,7 +297,7 @@ class MainClauseModel(object):
             for i in range(nupdates):
                 total_loss, itr_loss, verbreps, projection, divergence = self.updater_ada(idx)
 
-            if not j % 10:
+            if not j % 500: # NH: originally 10
                 self._verbreps_hist.append(verbreps)
                 self._projection_hist.append(projection)
 
@@ -308,12 +308,12 @@ class MainClauseModel(object):
                     np.round(itr_loss,3), '\tdiverge', np.round(divergence, 7), '\t', verb_list,'\n',
                     # ADDED for debugging
                     '\t', verb_list,'\t verb ID', np.array(self.data.verb)[idx],
-                    #'\njs', divergence, '\nverbrep gradients', self.rep_grad_hist_t['verbreps'].eval()
+                    #'\nfp', self._featureprob.eval() #'\njs', divergence, '\nverbrep gradients', self.rep_grad_hist_t['verbreps'].eval()
                     )
                     
 
         
-    def fit(self, data, nepochs=0, niters=20000, nupdates=1,
+    def fit(self, data, nepochs=0, niters=20000, nupdates=1, # niters = 20000
             stochastic=True, verbose=True): # DEFAULT verbose = False
         self._initialize_model(data, stochastic)
 
@@ -381,9 +381,13 @@ class MainClauseModel(object):
     
     @property
     def feature_prob(self):
-        return pd.DataFrame(self._featureprob.eval(),
-                            index=self.data.categories('verb'),
+        # NH amended
+        featprob = pd.DataFrame(self._featureprob.eval(), index=self.data.categories('verb'),
                             columns=self.data.feature_names)
+        featprob['verb'] = self.data.categories('verb')
+        return featprob #pd.DataFrame(self._featureprob.eval(),
+               #             index=self.data.categories('verb'),
+               #             columns=self.data.feature_names)
     
 def main():
     import data

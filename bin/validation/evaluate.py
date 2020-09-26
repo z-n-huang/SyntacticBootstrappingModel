@@ -12,7 +12,7 @@ wkdir = r"C:/Users/znhua/OneDrive/Documents/gh/MainClauseModel/bin"
 gleason_gold = pd.read_csv(wkdir + r"/data/gleason_corpus_gold.csv")
 
 valid_results_files = []
-for f in glob.glob(wkdir+ r"/results/1e0/*.csv"):
+for f in glob.glob(wkdir+ r"/results/1e2/*.csv"):
     if "feature" in f.replace(wkdir, ""):
         valid_results_files.append(f)
 

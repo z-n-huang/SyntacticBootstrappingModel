@@ -12,7 +12,7 @@ wkdir = r"C:/Users/znhua/OneDrive/Documents/gh/MainClauseModel/bin"
 gleason_gold = pd.read_csv(wkdir + r"/data/gleason_corpus_gold.csv")
 
 valid_results_files = []
-for f in glob.glob(wkdir+ r"/results/1e2/*.csv"):
+for f in glob.glob(wkdir+ r"/results/1e-1/*.csv"):
     if "feature" in f.replace(wkdir, ""):
         valid_results_files.append(f)
 
@@ -68,8 +68,8 @@ def loop_itr(prob_itrs, itr, subcorp_gold, w_results):
 prob_itrs = []
 for f in valid_results_files:
     #f = valid_results_files[1]
-    weight = float(f[-7:-4])
-    subcorp_ind = int(f[-9:-8])
+    weight = float(f[-8:-4]) # -7:-4
+    subcorp_ind = int(f[-10:-9]) # -9:-8
     print("file", f, weight, subcorp_ind)
     # These are the feature probs associated with the training dataset
     # verb, child, itr, features
@@ -87,3 +87,12 @@ df_probs = df_probs[df_probs['child'].isin(ten_kids)][['verb', 'prob']].groupby(
 df_probs['att10'] = (df_probs.index).isin(att_verbs)
 
 df_probs.to_csv(wkdir + '/validation/weight' + str(weight) + ' en.csv')
+
+"""
+Validation process:
+0.1     meanall	313	mean10	177	median10	120 <<<
+1.0     meanall	228	mean10	167	median10	116
+10.0    meanall	206	mean10	168	median10	116
+100.0   meanall	184	mean10	157	median10	112
+
+"""

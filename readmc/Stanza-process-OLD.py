@@ -7,7 +7,7 @@ Created on Thu Sep 10 16:50:22 2020
 import glob
 import stanza
 import pandas as pd
-import CleanupMCCHILDES as cleanup
+
 """
 stanza.download('zh')   # This downloads the English models for the neural pipeline
 stanza.download('zh-hant')   # This downloads the English models for the neural pipeline
@@ -31,9 +31,6 @@ wh = ["什么", "谁", "哪",  "哪里", "哪儿", "哪边",
       "为什么", "怎么", "怎样", "怎么样", "怎么办",
       "为何", "如何", "多少",
       "干嘛", "干吗", "干什么", "做么", "啥"]
-
-
-xcomp = ['要', '说', '去', '来', '请', '继续', '用']
 
 def gen_heads(s):
     # Returns a list of heads and the lexical items that they govern.
@@ -90,28 +87,32 @@ s_str = "你 在 干嘛  ?"
 s_str = "我 是 谁 的 老婆 啊 ?"
 
 
-folderUse = cleanup.foldersFull[-2]
-cleanedSentences = cleanup.processFolder(folderUse)
-cleaned2 = cleanedSentences[:1000]
 
-pred_entries_x = []
-for i, entry in enumerate(cleaned2[:600]):
-    if i % 100 == 0:
-        print(i)
-    deps = get_deps(entry['cleanedUtterance'])
-    features_list = check_deps(deps, entry)
-    pred_entries_x += features_list
-    
-pd.DataFrame(pred_entries_x).to_csv('test.txt', index = False, encoding = 'utf-8-sig')
+xcomp = ['要', '说', '去', '来', '请', '继续', '用',]
 
+wkdir = r"C:/Users/znhua/bigUSB/corpora/stanford-parser-full-2018-10-17/data2/"
+
+allFiles = glob.glob(wkdir + "*.txt", recursive = True) 
+
+for filename in allFiles[9:10]:
+    #file = filename.replace(wkdir, "")
+    with open(filename, "r", encoding = "utf8") as fd:
+        raw = fd.readlines()
+print(filename, len(raw))
 
 heads = {}
-update_heads = {}    
-def get_deps(sentence_string):
+update_heads = {}
+all_deps = []
+
+for s_index, sentence_string in enumerate(raw):
+    if s_index%100 == 0:
+        print(s_index)
     s_str = sentence_string.replace('\n', '')
     doc = nlp(s_str)
+    verb_list = {}
     heads = {}
     update_heads = {}
+    embeddings = 0
     for s in doc.sentences:
         heads = gen_heads(s)
     
@@ -256,87 +257,54 @@ def get_deps(sentence_string):
     
         update_heads['sentence'] = [w.text for w in s.words]
         update_heads['pos'] = [w.xpos for w in s.words]
-    return update_heads
+        all_deps.append(update_heads)
 
 
 
 
-def check_deps(update_heads, entry = {'cleanedUtterance': 'null'}, 
-               s_ind = 0, obj = -1, has_clause = False, 
+def check_deps(update_heads, s_ind = 0, obj = -1, has_clause = True, 
                head_ind = 0, pred_ind = -1):
-    features_list = []
-    pred_is_verb = False
-    features = entry.copy()
     
-    head_lex = 0    
-    if head_ind == 0:
-        # And check for question / interrogatives
-        if features['cleanedUtterance'][-1] == '?':
-            features['force'] = 'Q' 
-    else:
+    head_lex = 0
+    if head_ind > 0:
         head_lex = update_heads['sentence'][head_ind-1]
-        
-    features.update({
-        'subj': '',
-        'has_whAxA': '',
-        'neg': '',
-        'force': '',
-        'modal': '',
-        'aspect': '',
-        'has_obj': type(obj) == dict,
-        'has_clause': has_clause,
-        'head': head_lex,
-        'pred': pred_ind,
-        'clausal_ind': -1,
-        #'s': ' '.join(update_heads['sentence']),
-    })
-
-    # Default assumption: there is no dependencies associated with the root/verb
-    deps = [{'type': 'None', 'lex': 'None', 'pos': 'None', 'ind': -1}]
+    features = {
+                'subj': '',
+    'has_whAxA': '',
+    'neg': '',
+    'force': '',
+    'modal': '',
+    'aspect': '',
+    'has_obj': type(obj) == dict,
+    'has_clause': has_clause,
+    'head': head_lex,
+    'pred': pred_ind,
+    'clausal_ind': -1,
+    's': ' '.join(update_heads['sentence']),
+    's_ind': s_ind
     
-    if features['head'] in wh:
+    }
+    obj = -1
+    has_clause = False
+    
+    if pred_ind == -1:
+        pred_ind = update_heads[head_ind][0]['ind']
+        if features['s'][-1] == '?':
+            features['force'] = 'Q' 
+    
+    features['pred'] = update_heads['sentence'][pred_ind-1]
+    if features['pred'] in wh:
         features['has_whAxA'] += 'w'
-    # pred_ind = position of an embedded predicate or object. Assume there isn't one, i.e. -1
-    # If our sentence ends with a "?", it's a question
+    if update_heads['pos'][pred_ind-1] == 'VV':
+        features['pred'] += 'v'
     
-    
-    #print("Before deps", head_ind, head_lex, pred_ind, obj)
-    
-    # If we know beforehand that there is an embedded verb
-    # and that the verb has dependencies, look up its dependencies
-    # (Often, there is no embedded verb: no embedded clause for the head verb
-    # If so, let it be)
-    if pred_ind in update_heads.keys():
+        #features['clausal_ind'] = update_heads['sentence'][pred_ind-1]
+    try:
         deps = update_heads[pred_ind]
-        # What is this predicate? Get the lexical item
-    elif head_ind == 0:
-        # We don't specify the main verb of the sentence, so we need to locate it
-        try:
-            # Go to the head, find the first dependency. 
-            # Assume this is the predicate / object. Locate its position ('ind')
-            first_item = update_heads[head_ind][0]
-            pred_ind = first_item['ind']
-            #print("Head_index, Pred_info", head_ind, pred_info)
-            # 
-            if first_item['type'] in ['root', 'rcomp', 'xcomp', 'ccomp']:
-                deps = update_heads[pred_ind]
-                features['has_clause'] = True
-        except:
-            # Sometimes we will fail to find an embedded predicate or object.
-            # Then leave it as -1
-            pred_ind = -1
-    #print("After deps", head_lex, head_ind, pred_ind, has_clause, deps, obj)
+    except:
+        deps = [{'type': 'None', 'lex': 'None', 'pos': 'None', 'ind': -1}]
     
-    if pred_ind != -1:
-        pred_is_verb = update_heads['pos'][pred_ind-1].startswith('V')
-        features['pred'] = update_heads['sentence'][pred_ind-1]
-        # If this lexical item is a wh-word, mark the sentence as bearing a wh-word
-        if features['pred'] in wh:
-            features['has_whAxA'] += 'w'
-                
-    # So now, we have an embedded predicate and we know what dependencies it has
-    subj_track = {} # for gaosu. Stanza handles gaosu weirdly
-    # Go through each dependency
+    subj_track = {}
     for dep in deps:
         #if len(dep) > 0:
         #   print(dep)
@@ -345,20 +313,14 @@ def check_deps(update_heads, entry = {'cleanedUtterance': 'null'},
         elif dep == {'AxA': 'AoneA'}:
             features['has_whAxA'] += 'AoneA'
         else:
-            if ('nsubj' in dep['type'] or 'csubj' in dep['type'] 
-                # But sometimes the parser will think that a comma can be a subject!
-                and dep['lex'] not in [',']):
+            if ('nsubj' in dep['type'] 
+                or 'csubj' in dep['type'] and dep['lex'] not in [',']):
                 features['subj'] = dep['lex']
-                # Sometimes the parser will think that gaosu's object is actually a subject!
                 if (features['head'] == '告诉' and 'nsubj' in dep['type'] ):
-                    # Add all of gaosu's predicate's subjects into a dictionary, subj_track
                     subj_track[ dep['ind'] ] = dep
-                    # If gaosu's embedded predicate has two or more subjects,
-                    # the first "subject" is probably gaosu's object
                     if len(subj_track) > 1:
-                        obj = subj_track[ min(subj_track.keys()) ] # this gets us the first "subject"
-            
-            # For negation
+                        obj = subj_track[ min(subj_track.keys()) ]
+                        features['has_obj'] = True
             if dep['lex'] in ['不', '没', '没有']:
                 features['neg'] = dep['lex']
             # bie
@@ -381,58 +343,127 @@ def check_deps(update_heads, entry = {'cleanedUtterance': 'null'},
             # Wh
             if (dep['lex'] in wh):
                 features['has_whAxA'] += 'w'
-            # Wh inside a NP or clausal subject
             if (dep['type'] in ['nsubj', 'csubj']):
-                # If the subject is complex -- has its own dependencies
                 if dep['ind'] in update_heads.keys():
                     #print(77, dep)
-                    # Go through the subject's dependencies
                     for dep_of_dep in update_heads[ dep['ind'] ]:
                         if len(dep_of_dep.keys()) > 1 and dep_of_dep['lex'] in wh:
                             features['has_whAxA'] += 'w'
-            # If we already know that there is an object (e.g. object of gaosu)
+            
             if type(obj) == dict:
-                # See if the object is complex enough to have its own dependencies
-                features['has_obj'] = True
                 if obj['ind'] in update_heads.keys():
                     for dep_of_dep in update_heads[ obj['ind'] ]:
                         if len(dep_of_dep.keys()) > 1 and dep_of_dep['lex'] in wh:
                             features['has_whAxA'] += 'w'
-             
-            if (dep['type'] in ['rcomp', 'xcomp', 'ccomp', 'obj'] and 
-                pred_ind < dep['ind'] # Check that the head comes before the complement
+                
+            # Complements
+            if (dep['type'] in ['rcomp', 'xcomp', 'ccomp', 'obj'] and pred_ind < dep['ind']
                 ):
+                features['clausal_ind'] = dep['ind']
                 if dep['type'] == 'obj':
                     obj = dep
-                    has_clause = False
-                    features['clausal_ind'] = -1
-                    #print(obj, features['clausal_ind'], update_heads.keys())
-                else:                    
-                    features['has_clause'] = True
-                    features['clausal_ind'] = dep['ind']
+                    #print(obj)
+                else:
                     has_clause = True
-            
-    #if features['clausal_ind'] in update_heads.keys():
+                
+    if features['clausal_ind'] in update_heads.keys():
         #print(features['clausal_ind'])
-    # If we have located a predicate (and have gone through its non-complement dependencies, like its subject and negation)
-    #print("Before analyzing embedding", pred_ind, update_heads['pos'][pred_ind-1], update_heads['pos'][pred_ind-1].startswith('V'), pred_is_verb, obj, features['clausal_ind'], has_clause)
-    if pred_ind != -1 and pred_is_verb:
-        
-        # Now set the predicate as its own head. See what complements this predicate has
-        embedded_pred_features = check_deps(update_heads, entry, s_ind, 
-                                            obj, has_clause, 
-                                            # Head, predicate
-                                            pred_ind, features['clausal_ind'])
-        features_list += embedded_pred_features
+        pred_entries.append(check_deps(update_heads, s_ind, obj, has_clause, pred_ind, features['clausal_ind']))
     #print(pred, 1, subj, has_whAxA, 3, neg, force,5,  modal, aspect, 7, has_obj)
-    features_list.append(features)
-    return features_list
+    return features
     
-for i, entry in enumerate(cleaned2[8:9]):
-    if i % 100 == 0:
-        print(i)
-    deps = get_deps(entry['cleanedUtterance'])
-    features_list = check_deps(deps, entry)
-features_list 
 
-check_deps(get_deps(cleaned2[-425]['cleanedUtterance']))
+pred_entries = []
+for s_ind, s_dep in enumerate(all_deps):
+    pred_entries.append(check_deps(s_dep, s_ind))
+
+filename
+pdpe = pd.DataFrame(pred_entries)
+pdpe.to_csv('test-stanza-zhounarratives.txt', encoding ='utf8', index = False)
+
+
+"""
+Read Stanford Parser outputs
+
+export CLASSPATH=/mnt/c/Users/znhua/bigUSB/corpora/stanford-parser-full-2018-10-17/*:
+cd /mnt/c/Users/znhua/bigUSB/corpora/stanford-parser-full-2018-10-17
+java -mx2000m edu.stanford.nlp.parser.lexparser.LexicalizedParser -encoding utf-8  -outputFormat "wordsAndTags,"  edu/stanford/nlp/models/lexparser/chineseFactored.ser.gz data/ntd.txt > data/output/wt.txt
+java -mx2000m -cp "*" edu.stanford.nlp.parser.lexparser.LexicalizedParser -encoding utf-8  -outputFormat "typedDependencies"  edu/stanford/nlp/models/lexparser/chineseFactored.ser.gz  data/ntdall.txt > data/output/tdall.txt
+java -mx2000m edu.stanford.nlp.parser.lexparser.LexicalizedParser -encoding utf-8 \
+ -outputFormat "penn"  edu/stanford/nlp/models/lexparser/chineseFactored.ser.gz \
+ data/ntd2.txt > data/output/pn.txt
+
+
+for f in folders:
+    print('java -mx3000m -cp "*" edu.stanford.nlp.parser.lexparser.LexicalizedParser -encoding utf-8  -outputFormat "typedDependencies"  edu/stanford/nlp/models/lexparser/chineseFactored.ser.gz  data/' 
+          + f +'-ntdall.txt > data/output/' + f + '-tdall.txt')
+for f in folders:
+    print('java -mx3000m -cp "*" edu.stanford.nlp.parser.lexparser.LexicalizedParser -encoding utf-8  -outputFormat "wordsAndTags,"  edu/stanford/nlp/models/lexparser/chineseFactored.ser.gz  data/' 
+          + f +'-ntdall.txt > data/output/' + f + '-wtall.txt')
+"""
+"""
+
+from nltk.parse import CoreNLPParser
+from nltk import ParentedTree
+# in CMD
+EN
+cd C:\Users\znhua\Documents\stanford-corenlp-full-2018-10-05
+cd C:\Users\znhua\bigUSB\corpora\stanford-corenlp-full-2018-10-05
+java -mx1g     -cp "*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer \
+-preload tokenize,ssplit,pos,lemma,parse,depparse \
+-status_port 9000 -port 9000 -timeout 15000 & 
+
+MC
+cd C:\Users\znhua\bigUSB\corpora\stanford-corenlp-full-2018-10-05
+java -Xmx1500m -cp "*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer -serverProperties StanfordCoreNLP-chinese.properties -preload tokenize,pos,parse,depparse -status_port 9001  -port 9001 -timeout 15000 &
+#
+parser = CoreNLPParser(url='http://localhost:9000')
+line, = parser.raw_parse('Mary had a little lamb.')
+
+parser = CoreNLPParser('http://localhost:9001')
+line = parser.tokenize(u'我家没有电脑。')
+list(line)
+line = parser.parse(u'我家没有电脑。')
+
+line, = parser.depparse(u'我家没有电脑。')
+
+# this works!#
+from nltk.parse.corenlp import CoreNLPDependencyParser
+dep_parser = CoreNLPDependencyParser(url='http://localhost:9000')
+parse, = dep_parser.raw_parse(
+   'The quick brown fox jumps over the lazy dog.'
+)
+
+dep_parser = CoreNLPDependencyParser(url='http://localhost:9001')
+parse, = dep_parser.raw_parse(
+  u'我家没有电脑。'
+)
+
+# Generate tagged sentences DONE
+# Does it handle SFPs correctly? SORT OF, DONE
+# Generate dependency tree DONE
+# Check annotation of dependency trees: MOSTLY OK
+## how to tell if there are coordinated clauses? NOT WORRYING ABOUT THAT
+## how to tell if subordinate clauses? XCOMP (PRO) CCOMP (INTERNAL SUBJECT)
+
+## nice interface but the parsing is terrible
+import stanfordnlp
+stanfordnlp.download('en')   # This downloads the English models for the neural pipeline
+nlp = stanfordnlp.Pipeline() # This sets up a default neural pipeline in English
+doc = nlp("Barack Obama was born in Hawaii.  He was elected president in 2008.")
+doc.sentences[0].print_dependencies()
+
+stanfordnlp.download('zh')   # This downloads the English models for the neural pipeline
+nlp = stanfordnlp.Pipeline(lang= 'zh',
+                        processors='tokenize,pos,depparse', ) # This sets up a default neural pipeline in English
+doc = nlp("要么 就 吃 饭 要么 就 玩 游戏 .")
+doc = nlp(ssRA[4]['procSplitSentences'][0]) 
+doc.sentences[0].print_dependencies()
+
+os.environ['STANFORD_PARSER'] = 'C:/Users/znhua/bigUSB/corpora/stanford-parser-full-2018-10-17/'
+os.environ['STANFORD_MODELS'] = 'C:/Users/znhua/bigUSB/corpora/stanford-parser-full-2018-10-17/'
+
+parser = stanford.StanfordParser(model_path="C:/Users/znhua/bigUSB/corpora/stanford-parser-full-2018-10-17/englishPCFG.ser.gz")
+sentences = parser.raw_parse_sents(("Hello, My name is Melroy.", "What is your name?"))
+print sentences
+"""

@@ -36,6 +36,7 @@ markers = [
 "[!!]", # preceding word is contrastively stressed
 "‡", # satellite markers
 "&", # filled pauses,
+"=laughs",
 "[+ Y]", # not sure what this is?? found in Zhou2
 ]
 repeats = ["[//]", # retrace / restart comes next

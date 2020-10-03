@@ -4,7 +4,7 @@ Created on Thu Sep 10 16:50:22 2020
 
 @author: znhua
 """
-import glob
+import glob, random
 import stanza
 import pandas as pd
 import CleanupMCCHILDES as cleanup
@@ -33,7 +33,7 @@ wh = ["什么", "谁", "哪",  "哪里", "哪儿", "哪边",
       "干嘛", "干吗", "干什么", "做么", "啥"]
 
 
-xcomp = ['要', '说', '去', '来', '请', '继续', '用']
+xcomp = ['要', '说', '去', '来', '请', '继续', '用', '想']
 
 def gen_heads(s):
     # Returns a list of heads and the lexical items that they govern.
@@ -90,20 +90,6 @@ s_str = "你 在 干嘛  ?"
 s_str = "我 是 谁 的 老婆 啊 ?"
 
 
-folderUse = cleanup.foldersFull[-2]
-cleanedSentences = cleanup.processFolder(folderUse)
-cleaned2 = cleanedSentences[:1000]
-
-pred_entries_x = []
-for i, entry in enumerate(cleaned2[:600]):
-    if i % 100 == 0:
-        print(i)
-    deps = get_deps(entry['cleanedUtterance'])
-    features_list = check_deps(deps, entry)
-    pred_entries_x += features_list
-    
-pd.DataFrame(pred_entries_x).to_csv('test.txt', index = False, encoding = 'utf-8-sig')
-
 
 heads = {}
 update_heads = {}    
@@ -112,6 +98,127 @@ def get_deps(sentence_string):
     doc = nlp(s_str)
     heads = {}
     update_heads = {}
+    
+    def remap(heads):
+        # Initialize a dictionary, update_heads
+        update_heads = {}
+        for head in heads.keys():
+            update_heads[head] = []
+        
+        # Re-map heads, if necessary
+        # Sometimes we have HEAD ... DEP when it should be DEP ... HEAD
+        # For instance: EAT ... WANT when it should be WANT ... EAT
+        # This tracks what heads we need to remap
+        embedded_embedding = {}
+        embedding_lex = {}
+        # How many remaps in total?
+        remap_count = 0
+        
+        for head_ind, deps in heads.items():
+            # Go through the dependencies
+            for dep in deps:
+                if len(dep.keys()) > 1:
+                    if (dep['pos'] in ['MD', 'VV', 'JJ'] 
+                        and (dep['ind']-1 +2) <= len(s.words)):
+                        xA = ( s.words[dep['ind']-1 +1].text in ['不', '没', '一'] 
+                            and s.words[dep['ind']-1 +2].text[0] == dep['lex'])
+                    #print(88, dep)
+                    # Make sure that head_ind > 0. head_ind == 0 => ROOT, which is always a head
+                    if head_ind > 0 and (
+                        # If the lexical item precedes the head and is an xcomp, ccomp, etc.
+                        # Lexical items in these relations should come after their heads
+                        (
+                         dep['ind'] < head_ind and dep['type'] in ['aux', 'xcomp', 'ccomp', 'acl']
+                            and dep['lex'] in ['要', '觉得', '知道', '看', '有', '想']
+                            and xA == False
+                            )
+                        # for AxA, especially for verbs, since they embed.
+                        # Pass for adjectives in AxA
+                        or ('AxA' in dep.keys() and dep['pos'] in ['VV', 'MD'])
+                        # Note: parser doesn't handle gaosu very well
+                        or (dep['type'] in ['acl'] and dep['lex'] in ['告诉'])
+                        # Weird cases of A-not-A
+                        ):
+                        
+                        # Add the entry into heads
+                        
+                        # Construct a more accurate relation for these dependencies
+                        # Call these dependencies Rcomp or Redup (for AxA)
+                        comp_type = 'rcomp'
+                        if 'AxA' in dep.keys():
+                            pass #comp_type = 'redup'
+                        
+                        deps_for_update = {'type': comp_type,
+                           'ind': head_ind,
+                           'lex': s.words[head_ind-1].text,
+                           'pos': s.words[head_ind-1].xpos
+                            }
+                        # Add this relation to update_heads
+                        update_heads[dep['ind']] = [ deps_for_update ]
+                        
+                        # If this is a case of AxA, then add a AxA flag
+                        # This states that the head has AxA morphology
+                        if 'AxA' in dep.keys():
+                            update_heads[dep['ind']].append(
+                                {'AxA': dep['AxA'],
+                                })
+                        # We track which lexical items have been remapped
+                        # Put the syntactically-lower head as the key of the dictionary embedded_embedding
+                        if s.words[dep['ind']-1].text in ['要', '觉得', '知道', '看', '有'] + xcomp:
+                            embedded_embedding[head_ind] = dep['ind'] #embedded, embedding
+                            embedding_lex[dep['ind']] = dep['lex']
+                        
+                        remap_count += 1
+        #print(99, heads, embedded_embedding)
+        # Fix AxA coding with root
+        if len(heads) > 0:
+            #print(99, heads)
+            if 'AxA' in heads[0][0].keys():
+                update_heads[ heads[0][0]['ind'] ].append( {'AxA': heads[0][0]['AxA']})
+                
+        # At this point, update_heads only has data about the heads that need to be remapped.                    
+        # Go through the lexical items again
+        for head_ind, deps in heads.items():
+            # If the head is a head that has been remapped
+            #print(head_ind, deps)
+            if head_ind in embedded_embedding.keys():
+                for dep in deps:
+                    if len(dep.keys()) > 1:
+                        # If the dependent precedes the remapped head
+                        # it is (most probably) actually a dependent of the new head
+                        # Make an exception: discourse particles and punctuation
+                        if (dep['ind'] < embedded_embedding[head_ind]
+                            or dep['type'] in ['punct', 'discourse']
+                        ):
+                            update_heads[embedded_embedding[head_ind]].append(dep)
+                        # Otherwise, probably a dependent of the old head.
+                        elif dep['ind'] > embedded_embedding[head_ind]:
+                            update_heads[head_ind].append(dep)
+            else:
+                
+                for dep in deps:
+                    #print(head_ind, dep['ind'])
+                    # If some other head names the remapped head as its dependent
+                    # Update the dependency
+                    if len(dep.keys()) > 1:
+                        if dep['ind'] in embedded_embedding.keys():
+                            #print(embedded_embedding[ dep['ind'] ])
+                            update_heads[head_ind].append(
+                                    {'ind': embedded_embedding[ dep['ind'] ],
+                                     'lex': embedding_lex[ embedded_embedding[ dep['ind'] ] ],
+                                     'pos': 'VV',
+                                     'type': dep['type']})
+                        else:
+                            update_heads[head_ind].append(dep)
+        # In case there are multiple clauses that need remapping, 
+        # We need to repeat the process cyclically
+        #print(remap_count)
+        loop_count = 0
+        if remap_count > 1 and loop_count < 0:
+            update_heads = remap(update_heads)
+            
+        return update_heads
+    
     for s in doc.sentences:
         heads = gen_heads(s)
     
@@ -137,121 +244,8 @@ def get_deps(sentence_string):
                                 type_axa = 'AoneA'
                             
                         if type_axa != '':
-                            dep['AxA'] = type_axa                        
-    
-        def remap(heads):
-            # Initialize a dictionary, update_heads
-            update_heads = {}
-            for head in heads.keys():
-                update_heads[head] = []
-            
-            # Re-map heads, if necessary
-            # Sometimes we have HEAD ... DEP when it should be DEP ... HEAD
-            # For instance: EAT ... WANT when it should be WANT ... EAT
-            # This tracks what heads we need to remap
-            embedded_embedding = {}
-            embedding_lex = {}
-            # How many remaps in total?
-            remap_count = 0
-            
-            for head_ind, deps in heads.items():
-                # Go through the dependencies
-                for dep in deps:
-                    if len(dep.keys()) > 1:
-                        xA = False
-                        if (dep['pos'] in ['MD', 'VV', 'JJ'] 
-                            and (dep['ind']-1 +2) <= len(s.words)):
-                            xA = ( s.words[dep['ind']-1 +1].text in ['不', '没', '一'] 
-                                and s.words[dep['ind']-1 +2].text[0] == dep['lex'])
-                        #print(88, dep)
-                        # Make sure that head_ind > 0. head_ind == 0 => ROOT, which is always a head
-                        if head_ind > 0 and (
-                            # If the lexical item precedes the head and is an xcomp, ccomp, etc.
-                            # Lexical items in these relations should come after their heads
-                            (
-                             dep['ind'] < head_ind and dep['type'] in ['aux', 'xcomp', 'ccomp', 'acl']
-                                and dep['lex'] in ['要', '觉得', '知道', '看', '有'] +xcomp
-                                and xA == False
-                                )
-                            # for AxA, especially for verbs, since they embed.
-                            # Pass for adjectives in AxA
-                            or ('AxA' in dep.keys() and dep['pos'] in ['VV', 'MD'])
-                            # Note: parser doesn't handle gaosu very well
-                            or (dep['type'] in ['acl'] and dep['lex'] in ['告诉'])
-                            # Weird cases of A-not-A
-                            ):
-                            
-                            # Add the entry into heads
-                            
-                            # Construct a more accurate relation for these dependencies
-                            # Call these dependencies Rcomp or Redup (for AxA)
-                            comp_type = 'rcomp'
-                            if 'AxA' in dep.keys():
-                                comp_type = 'redup'
-                            
-                            deps_for_update = {'type': comp_type,
-                               'ind': head_ind,
-                               'lex': s.words[head_ind-1].text,
-                               'pos': s.words[head_ind-1].xpos
-                                }
-                            # Add this relation to update_heads
-                            update_heads[dep['ind']] = [ deps_for_update ]
-                            
-                            # If this is a case of AxA, then add a AxA flag
-                            # This states that the head has AxA morphology
-                            if 'AxA' in dep.keys():
-                                update_heads[dep['ind']].append(
-                                    {'AxA': dep['AxA'],
-                                    })
-                            # We track which lexical items have been remapped
-                            # Put the syntactically-lower head as the key of the dictionary embedded_embedding
-                            embedded_embedding[head_ind] = dep['ind'] #embedded, embedding
-                            embedding_lex[dep['ind']] = dep['lex']
-                            remap_count += 1
-                            
-            # Fix AxA coding with root
-            if len(heads) > 0:
-                #print(99, heads)
-                if 'AxA' in heads[0][0].keys():
-                    update_heads[ heads[0][0]['ind'] ].append( {'AxA': heads[0][0]['AxA']})
-                    
-            # At this point, update_heads only has data about the heads that need to be remapped.                    
-            # Go through the lexical items again
-            for head_ind, deps in heads.items():
-                # If the head is a head that has been remapped
-                if head_ind in embedded_embedding.keys():
-                    for dep in deps:
-                        if len(dep.keys()) > 1:
-                            # If the dependent precedes the remapped head
-                            # it is (most probably) actually a dependent of the new head
-                            # Make an exception: discourse particles and punctuation
-                            if (dep['ind'] < embedded_embedding[head_ind]
-                                or dep['type'] in ['punct', 'discourse']
-                            ):
-                                update_heads[embedded_embedding[head_ind]].append(dep)
-                            # Otherwise, probably a dependent of the old head.
-                            elif dep['ind'] > embedded_embedding[head_ind]:
-                                update_heads[head_ind].append(dep)
-                else:
-                    for dep in deps:
-                        #print(head_ind, dep['ind'])
-                        # If some other head names the remapped head as its dependent
-                        # Update the dependency
-                        if len(dep.keys()) > 1:
-                            if dep['ind'] in embedded_embedding.keys():
-                                #print(embedded_embedding[ dep['ind'] ])
-                                update_heads[head_ind].append(
-                                        {'ind': embedded_embedding[ dep['ind'] ],
-                                         'lex': embedding_lex[ embedded_embedding[ dep['ind'] ] ],
-                                         'pos': 'VV',
-                                         'type': dep['type']})
-                            else:
-                                update_heads[head_ind].append(dep)
-            # In case there are multiple clauses that need remapping, 
-            # We need to repeat the process cyclically
-            if remap_count > 1:
-                update_heads = remap(update_heads)
-            return update_heads
+                            dep['AxA'] = type_axa
+        
         update_heads = remap(heads)
     
         update_heads['sentence'] = [w.text for w in s.words]
@@ -267,15 +261,6 @@ def check_deps(update_heads, entry = {'cleanedUtterance': 'null'},
     features_list = []
     pred_is_verb = False
     features = entry.copy()
-    
-    head_lex = 0    
-    if head_ind == 0:
-        # And check for question / interrogatives
-        if features['cleanedUtterance'][-1] == '?':
-            features['force'] = 'Q' 
-    else:
-        head_lex = update_heads['sentence'][head_ind-1]
-        
     features.update({
         'subj': '',
         'has_whAxA': '',
@@ -285,22 +270,33 @@ def check_deps(update_heads, entry = {'cleanedUtterance': 'null'},
         'aspect': '',
         'has_obj': type(obj) == dict,
         'has_clause': has_clause,
-        'head': head_lex,
+        'head': 0,
         'pred': pred_ind,
         'clausal_ind': -1,
         #'s': ' '.join(update_heads['sentence']),
     })
+    
+    #print(features)
+    if head_ind == 0:
+        # And use punctuation to check for interrogatives, 
+        # but only if it's a main clause
+        if update_heads['sentence'][-1] == '?':
+            features['force'] = 'Q' 
+    else:
+        # And while at it, if the head is not the root, figure out the main clause
+        features['head'] = update_heads['sentence'][head_ind-1]
+        
 
     # Default assumption: there is no dependencies associated with the root/verb
     deps = [{'type': 'None', 'lex': 'None', 'pos': 'None', 'ind': -1}]
-    
+    obj = -1 # Reset assumption that there is no object
     if features['head'] in wh:
         features['has_whAxA'] += 'w'
     # pred_ind = position of an embedded predicate or object. Assume there isn't one, i.e. -1
     # If our sentence ends with a "?", it's a question
     
     
-    #print("Before deps", head_ind, head_lex, pred_ind, obj)
+    #print("Before.deps", head_ind, features['head'], pred_ind, obj)
     
     # If we know beforehand that there is an embedded verb
     # and that the verb has dependencies, look up its dependencies
@@ -325,30 +321,42 @@ def check_deps(update_heads, entry = {'cleanedUtterance': 'null'},
             # Sometimes we will fail to find an embedded predicate or object.
             # Then leave it as -1
             pred_ind = -1
-    #print("After deps", head_lex, head_ind, pred_ind, has_clause, deps, obj)
+    #print("After.deps", head_ind, pred_ind, has_clause, deps, obj)
     
-    if pred_ind != -1:
+
+    if pred_ind == -1:
+        if deps == [{'type': 'None', 'lex': 'None', 'pos': 'None', 'ind': -1}]:
+            features['has_clause'] = False
+    else:
         pred_is_verb = update_heads['pos'][pred_ind-1].startswith('V')
         features['pred'] = update_heads['sentence'][pred_ind-1]
+        if features['pred'] in ['要', '想'] and update_heads['pos'][pred_ind-1] in ['MD']:
+            pred_is_verb = True
         # If this lexical item is a wh-word, mark the sentence as bearing a wh-word
         if features['pred'] in wh:
             features['has_whAxA'] += 'w'
-                
+        elif features['pred'] in ['不', '没', '没有']:
+            features['neg'] = features['pred']
     # So now, we have an embedded predicate and we know what dependencies it has
     subj_track = {} # for gaosu. Stanza handles gaosu weirdly
+    pass_subj = False
     # Go through each dependency
     for dep in deps:
         #if len(dep) > 0:
         #   print(dep)
-        if dep == {'AxA': 'AnegA'}:
+        if dep == {'AxA': 'AnegA'}: #or 'AxA' in dep.keys():
             features['has_whAxA'] += 'AnegA'
-        elif dep == {'AxA': 'AoneA'}:
+        elif dep == {'AxA': 'AoneA'}: #or 'AoneA' in dep.keys():
             features['has_whAxA'] += 'AoneA'
         else:
-            if ('nsubj' in dep['type'] or 'csubj' in dep['type'] 
+            if (('nsubj' in dep['type'] or 'csubj' in dep['type'])
                 # But sometimes the parser will think that a comma can be a subject!
-                and dep['lex'] not in [',']):
-                features['subj'] = dep['lex']
+                and dep['lex'] not in [',', '别']):
+                if dep['type'] == 'nsubj:pass':
+                    pass_subj = True
+                
+                if pass_subj == False:
+                    features['subj'] = dep['lex']
                 # Sometimes the parser will think that gaosu's object is actually a subject!
                 if (features['head'] == '告诉' and 'nsubj' in dep['type'] ):
                     # Add all of gaosu's predicate's subjects into a dictionary, subj_track
@@ -356,13 +364,15 @@ def check_deps(update_heads, entry = {'cleanedUtterance': 'null'},
                     # If gaosu's embedded predicate has two or more subjects,
                     # the first "subject" is probably gaosu's object
                     if len(subj_track) > 1:
-                        obj = subj_track[ min(subj_track.keys()) ] # this gets us the first "subject"
-            
+                        #obj = subj_track[ min(subj_track.keys()) ] # this gets us the first "subject"
+                        features['has_obj'] = True
+                        #print(99, features)
+                #print("subject", dep, obj)
             # For negation
             if dep['lex'] in ['不', '没', '没有']:
                 features['neg'] = dep['lex']
             # bie
-            if dep['lex'] == '别' and (dep['type'] == 'advmod' or dep['type'] == 'RB'):
+            if dep['lex'] == '别' and (dep['type'] in ['advmod','nsubj','RB']):
                 features['force'] = 'PROH'
                 features['modal'] = dep['lex']
             # Modal
@@ -393,7 +403,7 @@ def check_deps(update_heads, entry = {'cleanedUtterance': 'null'},
             # If we already know that there is an object (e.g. object of gaosu)
             if type(obj) == dict:
                 # See if the object is complex enough to have its own dependencies
-                features['has_obj'] = True
+                #features['has_obj'] = True
                 if obj['ind'] in update_heads.keys():
                     for dep_of_dep in update_heads[ obj['ind'] ]:
                         if len(dep_of_dep.keys()) > 1 and dep_of_dep['lex'] in wh:
@@ -403,10 +413,11 @@ def check_deps(update_heads, entry = {'cleanedUtterance': 'null'},
                 pred_ind < dep['ind'] # Check that the head comes before the complement
                 ):
                 if dep['type'] == 'obj':
-                    obj = dep
-                    has_clause = False
-                    features['clausal_ind'] = -1
-                    #print(obj, features['clausal_ind'], update_heads.keys())
+                    if dep['lex'] not in [',']:
+                        obj = dep
+                        has_clause = False
+                        features['clausal_ind'] = -1
+                        #print(obj, features['clausal_ind'], update_heads.keys())
                 else:                    
                     features['has_clause'] = True
                     features['clausal_ind'] = dep['ind']
@@ -415,7 +426,7 @@ def check_deps(update_heads, entry = {'cleanedUtterance': 'null'},
     #if features['clausal_ind'] in update_heads.keys():
         #print(features['clausal_ind'])
     # If we have located a predicate (and have gone through its non-complement dependencies, like its subject and negation)
-    #print("Before analyzing embedding", pred_ind, update_heads['pos'][pred_ind-1], update_heads['pos'][pred_ind-1].startswith('V'), pred_is_verb, obj, features['clausal_ind'], has_clause)
+    #print("Before.analyzing.embedding", pred_ind, update_heads['pos'][pred_ind-1], update_heads['pos'][pred_ind-1].startswith('V'), pred_is_verb, obj, features['clausal_ind'], has_clause)
     if pred_ind != -1 and pred_is_verb:
         
         # Now set the predicate as its own head. See what complements this predicate has
@@ -427,8 +438,10 @@ def check_deps(update_heads, entry = {'cleanedUtterance': 'null'},
     #print(pred, 1, subj, has_whAxA, 3, neg, force,5,  modal, aspect, 7, has_obj)
     features_list.append(features)
     return features_list
-    
-for i, entry in enumerate(cleaned2[8:9]):
+
+get_deps('爸爸 拿 , 你 说 .')
+check_deps(get_deps('爸爸 拿 , 你 说 .'))
+for i, entry in enumerate(cleaned2[:100]):
     if i % 100 == 0:
         print(i)
     deps = get_deps(entry['cleanedUtterance'])
@@ -436,3 +449,70 @@ for i, entry in enumerate(cleaned2[8:9]):
 features_list 
 
 check_deps(get_deps(cleaned2[-425]['cleanedUtterance']))
+
+"""
+all_s = []
+for folder in cleanup.foldersFull:
+    all_s += cleanup.processFolder(folder)
+# all_s ~ 221893. Pick 5000 sentences
+
+# random sample 5000 items without replacement    
+samples = {}
+for i in range(10):
+    random.seed(i)
+    samples[i] = random.sample(all_s, 5000)
+
+
+random.seed(11)
+rand_s_index = random.sample(range(len(all_s)), 600)
+random_mc = []
+for i in rand_s_index:
+    random_mc += all_s[i-4:i+2]
+pd.DataFrame(random_mc).to_csv("mc600.txt", encoding = "utf-8-sig", index = False)
+
+# TCCM errors 18609, 20253, 32635, 33147, 35430, 35996, 56269, 57032, 57195, 57484
+recursion_error = []
+pred_entries_x = []
+
+for c, set_entries in samples.items():
+    if c == 3:
+        for i, entry in enumerate([set_entries[3752], set_entries[4089], set_entries[4280]]):
+            if i % 100 == 0:
+                print(c, i)
+            try:
+                deps = get_deps(entry['cleanedUtterance'])
+                features_list = check_deps(deps, entry)
+                for f in features_list:
+                    f['child'] = c
+                pred_entries_x += features_list
+            except RecursionError:
+                recursion_error.append(str(c) + '_' + str(i))
+                print(str(c) + '_' + str(i))
+
+
+
+folderUse = cleanup.foldersFull[-2]
+cleanedSentences = cleanup.processFolder(folderUse)
+cleaned2 = cleanedSentences[:300]
+
+
+for i, entry in enumerate(cleanedSentences[18609:]):
+    if i % 100 == 0:
+        print(i)
+    try:
+        deps = get_deps(entry['cleanedUtterance'])
+        features_list = check_deps(deps, entry)
+        pred_entries_x += features_list
+    except RecursionError:
+        recursion_error.append(i)
+    
+pd.DataFrame(pred_entries_x)[[
+    "clausal_ind", "cleanedUtterance", "file", "lineNo", 
+    "child", "force", "has_whAxA", "head", "has_obj", "has_clause", 
+    "subj", "modal", "neg", "aspect", "pred", 
+    "originalLine", "speaker"
+]].to_csv('mc10all.txt', index = False, encoding = 'utf-8-sig')
+
+pd.DataFrame(pred_entries_x).to_csv("mc10full.txt", index = False, encoding = "utf-8-sig")
+pd.DataFrame(random_mc).to_csv("mc.txt", index = False, encoding = "utf-8-sig")
+"""

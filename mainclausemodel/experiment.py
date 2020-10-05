@@ -79,7 +79,7 @@ def main():
     verbreps, projection, results_feature_probs = exp.results # NH: added feature probs
 
     verbs = ['want', 'see', 'know', 'think', 'say', 'like', 'tell', 'try', 'need', 'remember',
-             'DECLARATIVE', 'IMPERATIVE', '要', '看', '说', '看看', '讲', '想', '知道', '叫', '喜欢', '告诉', '帮', '让', '觉得',]
+             'DECLARATIVE', 'IMPERATIVE', '要', '看', '说', '看看', '讲', '想', '知道', '叫', '喜欢', '告诉', '帮', '让', '觉得','准备']
 			 # Chinese:
 			 # 'DECLARATIVE', 'IMPERATIVE', 'yao want', 'kan see', 'shuo say', 'kankan see-REDUP' ("look, try looking"), 'jiang say, tell', 'xiang think/want', 'zhidao know', 'jiao call, get', 'xihuan like', 'gaosu tell', 'bang help', 'rang let', 'juede feel',
     

@@ -18,27 +18,27 @@ theme_set(theme_classic()+ theme(axis.line.x = element_line(colour = 'black', si
 
 # Results for model without a either-or bias ``nopen(alty)''
 verbreps_nopen_results <- rbind(
-  read_csv("~/gh/MainClauseModel/bin/results/verbreps_resultsen 0-2 nopen.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/verbreps_resultsen 2-4 nopen.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/verbreps_resultsen 4-5 nopen.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/verbreps_resultsen 5-10 nopen.csv")
+  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen 0-2 nopen.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen 2-4 nopen.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen 4-5 nopen.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen 5-10 nopen.csv")
 )
 
 # Results for model with a either-or JSD bias ``wpen(alty)''
 verbreps_wpen_results <- rbind(
-  read_csv("~/gh/MainClauseModel/bin/results/verbreps_resultsen 0-2 wpen.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/verbreps_resultsen 2-4 wpen.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/verbreps_resultsen 4-5 wpen.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/verbreps_resultsen 5-10 wpen.csv")
+  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen 0-2 wpen.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen 2-4 wpen.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen 4-5 wpen.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen 5-10 wpen.csv")
 )
 
 # Results for model with a either-or KL bias
 verbreps_klpen_results <- rbind(
-  read_csv("~/gh/MainClauseModel/bin/results/verbreps_resultsen 0-2 kl.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/verbreps_resultsen 2-4 kl.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/verbreps_resultsen 4-6 kl.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/verbreps_resultsen 6-8 kl.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/verbreps_resultsen 8-10 kl.csv")
+  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen 0-2 kl.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen 2-4 kl.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen 4-6 kl.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen 6-8 kl.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen 8-10 kl.csv")
 )
 
 gleason_data <- read_csv("~/gh/MainClauseModel/bin/data/gleason_data_orig.csv")
@@ -51,21 +51,42 @@ verbreps_results <- verbreps_nopen_results  %>% filter(verb != "IMPERATIVE" & ve
 verbreps_results <- verbreps_klpen_results %>% filter(verb != "IMPERATIVE" & verb!="DECLARATIVE")
 
 
-# Checks - there should be 10 children, 10 verbs, 20000 entries / verb / child
-verbreps_results %>% group_by(child) %>% summarize(average_1 = mean(`0`), count = n())
-verbreps_results %>% group_by(verb) %>% summarize(average_1 = mean(`0`), count = n())
-
 ## END LOADING ENGLISH
 
 ## START LOADING MANDARIN
+verbreps_wpen_results <- rbind(
+  read_csv("~/gh/MainClauseModel/bin/results/mc/verbreps_resultsmc 0-2 wpen.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/mc/verbreps_resultsmc 2-4 wpen.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/mc/verbreps_resultsmc 4-6 wpen.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/mc/verbreps_resultsmc 6-8 wpen.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/mc/verbreps_resultsmc 8-10 wpen.csv")
+)
+# With penalty
+verbreps_results <- verbreps_wpen_results %>% filter(verb != "IMPERATIVE" & verb!="DECLARATIVE")
 
-## end without penalty
+# Without penalty
+verbreps_nopen_results <- rbind(
+  read_csv("~/gh/MainClauseModel/bin/results/mc/verbreps_resultsmc 0-2 nopen.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/mc/verbreps_resultsmc 2-4 nopen.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/mc/verbreps_resultsmc 4-6 nopen.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/mc/verbreps_resultsmc 6-8 nopen.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/mc/verbreps_resultsmc 8-10 nopen.csv")
+)
+# Without penalty
+verbreps_results <- verbreps_nopen_results  %>% filter(verb != "IMPERATIVE" & verb!="DECLARATIVE")
 
-gleason_data <- read_csv("data/processedmc2may21.csv")
+
+gleason_data <- read_csv("~/gh/MainClauseModel/bin/data/processedmc3oct3.csv")
 verbreps_results <- verbreps_results %>% filter(verb != "tell")
 verbreps_results <- verbreps_mc_results %>% filter(verb != "tell")
 
 ## END LOADING MANDARIN
+
+
+
+# Checks - there should be 10 children, 10 verbs, 20000 entries / verb / child
+verbreps_results %>% group_by(child) %>% summarize(average_1 = mean(`0`), count = n())
+verbreps_results %>% group_by(verb) %>% summarize(average_1 = mean(`0`), count = n())
 
 # PART ONE:
 # Plot verb representations
@@ -98,8 +119,9 @@ repmeans.summ$verbPlot <- recode(repmeans.summ$verb,
                                  "觉得" = "juede 'feel' (B)",
                                  "讲" = "jiang 'say' (B)",
                                  "知道" = "zhidao 'know' (B)", 
-                                 "告诉" = "gaosu 'tell' (B)", 
+                                 "告诉" = "gaosu 'tell' (B/D)", 
                                  "叫" = "jiao 'call/get' (D)",
+                                 "准备" = "zhunbei 'prepare to' (D)",
                                  
                                  "want" = "want (D)", 
                                  "see" = "see (B)", 
@@ -122,6 +144,8 @@ ggplot(repmeans.summ
          & verbPlot != "IMPERATIVE" & verbPlot !="DECLARATIVE"
          & verbPlot != "bang 'help' (O)" & verbPlot != "rang 'let' (O)"
          & verbPlot != "kankan 'see-DUP' (B)"
+         & verbPlot != "zhunbei 'prepare to' (D)"
+         #& verbPlot != "jiao 'call/get' (D)"
        ), 
        aes(x=(sentence+1)*10, y=med, color = variable, fill = variable )) + # linetype=variable, 
   geom_ribbon(aes(ymin=qmin, ymax=qmax), alpha = 0.1, color = NA) +
@@ -134,7 +158,8 @@ ggplot(repmeans.summ
   scale_y_continuous(name='Probability of semantic component') +
   scale_fill_hue(l=40) + # how light/dark the ribbon fill is
   scale_color_hue(l=40) + # how light/dark the line is
-  theme(legend.title=element_blank()) # hide legend name
+  theme(legend.title=element_blank()) + # hide legend name
+  theme(strip.text.x = element_text(size = 8))
 #dev.off()
 
 ### PART TWO: Probability of semantics vs. frequency of clausal complements
@@ -160,15 +185,17 @@ repmeans.emb$verb <- recode(repmeans.emb$verb,
                                  "要" = "yao\n'want' (D)",
                                  "说" = "shuo\n'say' (B)",
                                  "看" = "kan\n'see' (B)", 
+                                 "看看" = "kankan\n'see-DUP' (B)", 
                                  "想" = "xiang\n'think, want' (B, D)", 
                                  "让" = "rang\n'let' (O)", 
                                  "喜欢" = "xihuan\n'like' (D)",  
                                  "觉得" = "juede\n'feel' (B)",
                                  "讲" = "jiang\n'say' (B)",
                                  "知道" = "zhidao\n'know' (B)", 
-                                 "告诉" = "gaosu\n'tell' (B)", 
+                                 "告诉" = "gaosu\n'tell' (B/D)", 
                                  "叫" = "jiao\n'call/get' (D)",
                                  "帮" = "bang\n'help' (O)", 
+                                 "准备" = "zhunbei\n'prepare to' (D)", 
                             
                                  "want" = "want (D)", 
                                  "see" = "see (B)", 
@@ -187,15 +214,18 @@ repmeans.emb.cast$verb <- recode(repmeans.emb.cast$verb,
                                 "要" = "yao\n'want' (D)",
                                 "说" = "shuo\n'say' (B)",
                                 "看" = "kan\n'see' (B)", 
+                                "看看" = "kankan\n'see-DUP' (B)", 
                                 "想" = "xiang\n'think, want' (B, D)", 
                                 "让" = "rang\n'let' (O)", 
                                 "喜欢" = "xihuan\n'like' (D)",  
                                 "觉得" = "juede\n'feel' (B)",
                                 "讲" = "jiang\n'say' (B)",
                                 "知道" = "zhidao\n'know' (B)", 
-                                "告诉" = "gaosu\n'tell' (B)", 
+                                "告诉" = "gaosu\n'tell' (B/D)", 
                                 "叫" = "jiao\n'call/get' (D)",
                                 "帮" = "bang\n'help' (O)", 
+                                "准备" = "zhunbei\n'get ready to' (D)", 
+                                
                                 "want" = "want (D)", 
                                 "see" = "see (B)", 
                                 "know" = "know (B)", 
@@ -214,6 +244,8 @@ ggplot(filter(repmeans.emb %>%
                   & verb != "IMPERATIVE" & verb !="DECLARATIVE"
                   & verb != "bang\n'help' (O)" & verb != "rang\n'let' (O)"
                   & verb != "kankan\n'see-DUP' (B)"
+                  #& verb != "jiao\n'call/get' (D)"
+                  & verb != "zhunbei\n'prepare to' (D)"
       ), has.embpred), aes(x=prop, y=logistic(value), color = variable)) + 
   geom_point(size=1.5) +
   facet_wrap(~verb, ncol=5) + 
@@ -232,6 +264,8 @@ ggplot(filter(repmeans.emb %>%
                        & verb != "IMPERATIVE" & verb !="DECLARATIVE"
                        & verb != "bang\n'help' (O)" & verb != "rang\n'let' (O)"
                        & verb != "kankan\n'see-DUP' (B)"
+                       & verb != "jiao\n'call/get' (D)"
+                       #& verb != "zhunbei\n'prepare to' (D)"
                 ) %>% filter(variable == 'belief'), has.embpred), aes(x=verb, y=prop)) + 
   geom_boxplot(outlier.shape = NA) + geom_jitter(width = 0.2) +
   scale_y_log10(name='Proportion of sentences with embedded clause', 

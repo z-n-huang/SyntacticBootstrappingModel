@@ -60,7 +60,7 @@ class MainClauseModel(object):
         self.delta = delta
         self.orthogonality_penalty = orthogonality_penalty
         self.nonparametric = nonparametric
-        self.divergence_weight = -1e0 # For cross-validation: -0.1, -0.5, -1, -5, -10, -100
+        self.divergence_weight = -1e-1 # For cross-validation: -0.1, -0.5, -1, -5, -10, -100
         
         self._validate_params()
 
@@ -297,7 +297,7 @@ class MainClauseModel(object):
             for i in range(nupdates):
                 total_loss, itr_loss, verbreps, projection, divergence = self.updater_ada(idx)
 
-            if not j % 500: # NH: originally 10
+            if not j % 10: # NH: originally 10
                 self._verbreps_hist.append(verbreps)
                 self._projection_hist.append(projection)
 

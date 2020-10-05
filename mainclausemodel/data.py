@@ -135,7 +135,7 @@ class MainClauseData(object):
     def sentence(self, idx):
         return np.where(self._data.sentenceid==idx)[0].astype(np.int32)
     
-def main(datapath='../bin/data/gleason_data.csv', featurepath='../bin/data/mainclause_features.csv',
+def main(datapath='../bin/data/gleason_data_orig.csv', featurepath='../bin/data/mainclause_features.csv',
          separate_children=True):
     d = pd.read_csv(datapath)
     f = pd.read_csv(featurepath)
@@ -173,7 +173,7 @@ def main(datapath='../bin/data/gleason_data.csv', featurepath='../bin/data/mainc
     if separate_children:
         data = {}
         # Cross-validate weights using 1st 5 subcorpora (0:5) in Gleason. Test on 10 subcorpora, 6-15 (i.e. [5:15])
-        for c in d.child.unique()[:5]:
+        for c in d.child.unique()[4:5]:
             d_proc = preprocess_features(d[d.child==c])
             print('Child:', c, d[d.child==c].shape)
             data[c] = MainClauseData(d_proc, f)

@@ -15,14 +15,14 @@ stanza.download('zh-hant')   # This downloads the English models for the neural 
 nlp = stanza.Pipeline(lang = 'zh', tokenize_pretokenized=True) # This sets up a default neural pipeline in English
 
 
-modals = ["可能", "或许", "也许",
-          "一定","肯定",
-          "必须", "得",  "需要",  #"要",
+modals = ["可能", # "或许", "也许",
+          "一定", # "肯定",
+          "必须", "得", "需要",  #"要",
           "肯", "可以", "可", 
           "会", "能够", "能", 
           "应该", "应", "该",
           "将", 
-          #"别",
+          #"别", # We deal with bie separately, in the code
           ]
 aspectSuffix = ["了", "过", "着"]
 aspectPrefix = ["在", "没有", "没"]
@@ -99,7 +99,8 @@ def get_deps(sentence_string):
     heads = {}
     update_heads = {}
     
-    def remap(heads):
+    
+    def remap(heads, loop_count = 0): # loop_count stops remap from looping infinitely
         # Initialize a dictionary, update_heads
         update_heads = {}
         for head in heads.keys():
@@ -213,10 +214,12 @@ def get_deps(sentence_string):
         # In case there are multiple clauses that need remapping, 
         # We need to repeat the process cyclically
         #print(remap_count)
-        loop_count = 0
-        if remap_count > 1 and loop_count < 0:
-            update_heads = remap(update_heads)
+        
+        if remap_count > 1 and loop_count < 20:
+            loop_count += 1
+            update_heads = remap(update_heads, loop_count)
             
+        
         return update_heads
     
     for s in doc.sentences:
@@ -273,6 +276,7 @@ def check_deps(update_heads, entry = {'cleanedUtterance': 'null'},
         'head': 0,
         'pred': pred_ind,
         'clausal_ind': -1,
+        'embPredIsVV': False
         #'s': ' '.join(update_heads['sentence']),
     })
     
@@ -329,9 +333,12 @@ def check_deps(update_heads, entry = {'cleanedUtterance': 'null'},
             features['has_clause'] = False
     else:
         pred_is_verb = update_heads['pos'][pred_ind-1].startswith('V')
+        # A stricter criteria - this excludes the copula VC, while admitting the existential
+        features['embPredIsVV'] = update_heads['pos'][pred_ind-1].startswith('VV')
         features['pred'] = update_heads['sentence'][pred_ind-1]
         if features['pred'] in ['要', '想'] and update_heads['pos'][pred_ind-1] in ['MD']:
             pred_is_verb = True
+            features['embPredIsVV'] = update_heads['pos'][pred_ind-1].startswith('VV')
         # If this lexical item is a wh-word, mark the sentence as bearing a wh-word
         if features['pred'] in wh:
             features['has_whAxA'] += 'w'
@@ -456,13 +463,13 @@ for folder in cleanup.foldersFull:
     all_s += cleanup.processFolder(folder)
 # all_s ~ 221893. Pick 5000 sentences
 
-# random sample 5000 items without replacement    
+# random sample 5000 items without replacement
 samples = {}
 for i in range(10):
     random.seed(i)
     samples[i] = random.sample(all_s, 5000)
 
-
+# Pick out 600 main clauses + context
 random.seed(11)
 rand_s_index = random.sample(range(len(all_s)), 600)
 random_mc = []
@@ -471,12 +478,15 @@ for i in rand_s_index:
 pd.DataFrame(random_mc).to_csv("mc600.txt", encoding = "utf-8-sig", index = False)
 
 # TCCM errors 18609, 20253, 32635, 33147, 35430, 35996, 56269, 57032, 57195, 57484
+
 recursion_error = []
 pred_entries_x = []
 
+# Recursion error with 3:3752, 4089, 4280
+
 for c, set_entries in samples.items():
-    if c == 3:
-        for i, entry in enumerate([set_entries[3752], set_entries[4089], set_entries[4280]]):
+    if c > 5 and c <= 50:
+        for i, entry in enumerate(set_entries):
             if i % 100 == 0:
                 print(c, i)
             try:
@@ -489,7 +499,7 @@ for c, set_entries in samples.items():
                 recursion_error.append(str(c) + '_' + str(i))
                 print(str(c) + '_' + str(i))
 
-
+pd.DataFrame(pred_entries_x).to_csv("mc10all.txt", index = False, encoding = "utf-8-sig")
 
 folderUse = cleanup.foldersFull[-2]
 cleanedSentences = cleanup.processFolder(folderUse)
@@ -509,10 +519,10 @@ for i, entry in enumerate(cleanedSentences[18609:]):
 pd.DataFrame(pred_entries_x)[[
     "clausal_ind", "cleanedUtterance", "file", "lineNo", 
     "child", "force", "has_whAxA", "head", "has_obj", "has_clause", 
-    "subj", "modal", "neg", "aspect", "pred", 
+    "subj", "modal", "neg", "aspect", "pred", "embPredIsVV",
     "originalLine", "speaker"
 ]].to_csv('mc10all.txt', index = False, encoding = 'utf-8-sig')
 
-pd.DataFrame(pred_entries_x).to_csv("mc10full.txt", index = False, encoding = "utf-8-sig")
+pd.DataFrame(pred_entries_x).to_csv("mc6full.txt", index = False, encoding = "utf-8-sig")
 pd.DataFrame(random_mc).to_csv("mc.txt", index = False, encoding = "utf-8-sig")
 """

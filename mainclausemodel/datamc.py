@@ -136,7 +136,7 @@ class MainClauseData(object):
     def sentence(self, idx):
         return np.where(self._data.sentenceid==idx)[0].astype(np.int32)
     
-def main(datapath='../bin/data/processedmc2may21.csv', featurepath='../bin/data/mainclause_features.csv',
+def main(datapath='../bin/data/processedmc3oct3.csv', featurepath='../bin/data/mainclause_features.csv',
          separate_children=True):
     d = pd.read_csv(datapath)
     f = pd.read_csv(featurepath)
@@ -174,13 +174,13 @@ def main(datapath='../bin/data/processedmc2may21.csv', featurepath='../bin/data/
 
         return d
     """
-    d = d.drop(['utterance', 'embNegation', 'embDiscourse',
-                'embAdverb', 
+    d = d.drop(['utterance', 'embNegation', 
+                # 'embDiscourse', 'embAdverb', 
                ], axis = 1)
     if separate_children:
         data = {}
 
-        for c in d.child.unique()[:10]:
+        for c in d.child.unique()[8:10]:
             print('datapath', datapath, '\nChild:', c, d[d.child==c].shape)
             data[c] = MainClauseData(d[d.child==c], f)
 

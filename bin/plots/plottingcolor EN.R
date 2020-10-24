@@ -18,27 +18,28 @@ theme_set(theme_classic()+ theme(axis.line.x = element_line(colour = 'black', si
 
 # Results for model without a either-or bias ``nopen(alty)''
 verbreps_nopen_results <- rbind(
-  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen 0-2 nopen.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen 2-4 nopen.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen 4-5 nopen.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen 5-10 nopen.csv")
+  read_csv("~/gh/MainClauseModel/bin/results/en/nopen/verbreps_resultsen 0-2 nopen.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/en/nopen/verbreps_resultsen 2-4 nopen.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/en/nopen/verbreps_resultsen 4-5 nopen.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/en/nopen/verbreps_resultsen 5-10 nopen.csv")
 )
 
 # Results for model with a either-or JSD bias ``wpen(alty)''
 verbreps_wpen_results <- rbind(
-  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen 0-2 wpen.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen 2-4 wpen.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen 4-5 wpen.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen 5-10 wpen.csv")
+  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen wpen 0002.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen wpen 0204.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen wpen 0406.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen wpen 0608.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen wpen 0810.csv")
 )
 
 # Results for model with a either-or KL bias
 verbreps_klpen_results <- rbind(
-  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen 0-2 kl.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen 2-4 kl.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen 4-6 kl.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen 6-8 kl.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen 8-10 kl.csv")
+  read_csv("~/gh/MainClauseModel/bin/results/en/kl/verbreps_resultsen wpenkl 0002.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/en/kl/verbreps_resultsen wpenkl 0204.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/en/kl/verbreps_resultsen wpenkl 0406.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/en/kl/verbreps_resultsen wpenkl 0608.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/en/kl/verbreps_resultsen wpenkl 0810.csv")
 )
 
 gleason_data <- read_csv("~/gh/MainClauseModel/bin/data/gleason_data_orig.csv")
@@ -55,12 +56,13 @@ verbreps_results <- verbreps_klpen_results %>% filter(verb != "IMPERATIVE" & ver
 
 ## START LOADING MANDARIN
 verbreps_wpen_results <- rbind(
-  read_csv("~/gh/MainClauseModel/bin/results/mc/verbreps_resultsmc 0-2 wpen.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/mc/verbreps_resultsmc 2-4 wpen.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/mc/verbreps_resultsmc 4-6 wpen.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/mc/verbreps_resultsmc 6-8 wpen.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/mc/verbreps_resultsmc 8-10 wpen.csv")
+  read_csv("~/gh/MainClauseModel/bin/results/mc/verbreps_resultsmc wpen 0002.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/mc/verbreps_resultsmc wpen 0204.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/mc/verbreps_resultsmc wpen 0406.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/mc/verbreps_resultsmc wpen 0608.csv"),
+  read_csv("~/gh/MainClauseModel/bin/results/mc/verbreps_resultsmc wpen 0810.csv")
 )
+
 # With penalty
 verbreps_results <- verbreps_wpen_results %>% filter(verb != "IMPERATIVE" & verb!="DECLARATIVE")
 
@@ -77,7 +79,7 @@ verbreps_results <- verbreps_nopen_results  %>% filter(verb != "IMPERATIVE" & ve
 
 
 gleason_data <- read_csv("~/gh/MainClauseModel/bin/data/processedmc3oct3.csv")
-verbreps_results <- verbreps_results %>% filter(verb != "tell")
+verbreps_results <- verbreps_wpen_results %>% filter(verb != "tell")
 verbreps_results <- verbreps_mc_results %>% filter(verb != "tell")
 
 ## END LOADING MANDARIN
@@ -144,8 +146,8 @@ ggplot(repmeans.summ
          & verbPlot != "IMPERATIVE" & verbPlot !="DECLARATIVE"
          & verbPlot != "bang 'help' (O)" & verbPlot != "rang 'let' (O)"
          & verbPlot != "kankan 'see-DUP' (B)"
-         & verbPlot != "zhunbei 'prepare to' (D)"
-         #& verbPlot != "jiao 'call/get' (D)"
+         #& verbPlot != "zhunbei 'prepare to' (D)"
+         & verbPlot != "jiao 'call/get' (D)"
        ), 
        aes(x=(sentence+1)*10, y=med, color = variable, fill = variable )) + # linetype=variable, 
   geom_ribbon(aes(ymin=qmin, ymax=qmax), alpha = 0.1, color = NA) +

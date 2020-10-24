@@ -60,7 +60,7 @@ class MainClauseModel(object):
         self.delta = delta
         self.orthogonality_penalty = orthogonality_penalty
         self.nonparametric = nonparametric
-        self.divergence_weight = -1e-1 # For cross-validation: -0.1, -0.5, -1, -5, -10, -100
+        self.divergence_weight = -1 # For cross-validation: -0.1, -0.5, -1, -5, -10, -100
         
         self._validate_params()
 
@@ -147,7 +147,7 @@ class MainClauseModel(object):
                     + (1-assertProb) * T.log((1-assertProb) / m1))
         kl_request = ((1-requestProb) * T.log((1-requestProb) / m0) 
                 + requestProb * T.log(requestProb / m1))
-        js = ((kl_assert + kl_request) / 2 / np.log(2))**1 
+        js = ((kl_assert + kl_request) / 2 )**1 
         # Above code leads to NaN error for verbs 0 and 1 (DECLARATIVE & IMPERATIVE), probably because of how Theano deals with floating point representations???
         # These should be 0. Stipulate them as such.
         # cf. https://stackoverflow.com/questions/31919818/theano-sqrt-returning-nan-values. 
@@ -165,7 +165,7 @@ class MainClauseModel(object):
                     + (1-assertProb) * T.log((1-assertProb) / requestProb))
         kl_request = ((1-requestProb) * T.log((1-requestProb) / assertProb) 
                 + requestProb * T.log(requestProb / (1-assertProb)))
-        kl = ((kl_assert + kl_request) / 2 / np.log(2))**1 
+        kl = ((kl_assert + kl_request) / 2 )**1 
         # Above code leads to NaN error for verbs 0 and 1 (DECLARATIVE & IMPERATIVE), probably because of how Theano deals with floating point representations???
         # These should be 0. Stipulate them as such.
         # cf. https://stackoverflow.com/questions/31919818/theano-sqrt-returning-nan-values. 

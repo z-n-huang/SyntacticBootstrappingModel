@@ -180,7 +180,7 @@ def main(datapath='../bin/data/processedmc3oct3.csv', featurepath='../bin/data/m
     if separate_children:
         data = {}
 
-        for c in d.child.unique()[8:10]:
+        for c in d.child.unique()[0:2]:
             print('datapath', datapath, '\nChild:', c, d[d.child==c].shape)
             data[c] = MainClauseData(d[d.child==c], f)
 

@@ -21,8 +21,8 @@ def add_url(url):
 
 
 
-url_base = r'https://spellout.net/ibexexps/znhuang/pineapple-double/server.py?withsquare=000'
-
+#url_base = r'https://spellout.net/ibexexps/znhuang/pineapple-double/server.py?withsquare=000'
+url_base = r'https://spellout.net/ibexexps/znhuang/pineapple-comp2/server.py?withsquare=000'
 
 
 pyautogui.hotkey('alt', 'tab')
@@ -42,13 +42,14 @@ for ls in range(6):
     
     # Actual items
     #for q in range(12+12+4+28):
-    for q in range(12+12+48):
+    #for q in range(12+12+48):
+    for q in range(24+24):
         pyautogui.typewrite([ind])
         time.sleep(.1)
     # Profile
-    pyautogui.typewrite(["3", "2"])
+    #pyautogui.typewrite(["3", "2"])
     time.sleep(1) # Instructions
-    pyautogui.hotkey('ctrl', 'r')
+    
     
 """
 

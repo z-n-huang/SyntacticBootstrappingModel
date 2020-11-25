@@ -149,11 +149,11 @@ ggplot(repmeans.summ
          #& verbPlot != "zhunbei 'prepare to' (D)"
          & verbPlot != "jiao 'call/get' (D)"
        ), 
-       aes(x=(sentence+1)*10, y=med, color = variable, fill = variable )) + # linetype=variable, 
-  geom_ribbon(aes(ymin=qmin, ymax=qmax), alpha = 0.1, color = NA) +
+       aes(x=(sentence+1)*10, y=med, color = variable, linetype = variable, fill = variable)) + # 
+  geom_ribbon(aes(ymin=qmin, ymax=qmax,  fill = variable), alpha = 0.1, color = NA) +
   geom_ribbon(aes(ymin=q25, ymax=q75),  alpha = 0.3, color = NA) +
   #geom_ribbon(alpha=.05, aes(ymin=q025, ymax=q975)) +
-  geom_line(size=1) + # color = black
+  geom_line(size = 1) + # color = black
   facet_wrap(~verbPlot, ncol = 5) + 
   scale_linetype(name='') +
   scale_x_continuous(name='Number of sentences seen (thousands)', breaks=c(0,10000,20000), labels=c('0', '10', '20')) +
@@ -161,7 +161,8 @@ ggplot(repmeans.summ
   scale_fill_hue(l=40) + # how light/dark the ribbon fill is
   scale_color_hue(l=40) + # how light/dark the line is
   theme(legend.title=element_blank()) + # hide legend name
-  theme(strip.text.x = element_text(size = 8))
+  theme(strip.text.x = element_text(size = 8)) +
+  labs(color = "", linetype = "", fill = "") # needed to merge legends - otherwise there will be separate legends
 #dev.off()
 
 ### PART TWO: Probability of semantics vs. frequency of clausal complements

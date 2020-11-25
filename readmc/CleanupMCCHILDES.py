@@ -238,6 +238,7 @@ def processFolder(folder):
                                 })
 
     return fileLineSpeakerCleanOriginal
-
-#pd.DataFrame(fileLineSpeakerCleanOriginal).to_csv('test.txt', index = False)
-    
+"""
+fileLineSpeakerCleanOriginal = processFolder(foldersFull[0])
+pd.DataFrame(fileLineSpeakerCleanOriginal).to_csv('test.txt', index = False)
+"""

@@ -139,8 +139,8 @@ class MainClauseModel(object):
     # ADDED: divergence function. Calculates JS-divergence (cf. SciPy version which yields the square root value)
     def _get_js_divergence(self):
         vr = self._verbreps
-        assertProb = vr[:, 0]
-        requestProb = vr[:, 1]
+        assertProb = vr[:, 0] #s_v,belief
+        requestProb = vr[:, 1] #s_v,desire
         m0 = (assertProb + 1-requestProb)/2
         m1 = (1-assertProb + requestProb)/2
         kl_assert = (assertProb * T.log(assertProb / m0) 
@@ -148,7 +148,7 @@ class MainClauseModel(object):
         kl_request = ((1-requestProb) * T.log((1-requestProb) / m0) 
                 + requestProb * T.log(requestProb / m1))
         js = ((kl_assert + kl_request) / 2 )**1 
-        # Above code leads to NaN error for verbs 0 and 1 (DECLARATIVE & IMPERATIVE), probably because of how Theano deals with floating point representations???
+        # Above code leads to NaN error for verbs 0 and 1 (DECLARATIVE & IMPERATIVE), probably because of how Theano deals with floating point representations
         # These should be 0. Stipulate them as such.
         # cf. https://stackoverflow.com/questions/31919818/theano-sqrt-returning-nan-values. 
         js = T.set_subtensor(js[0], 0.) # try ... js[tuple([0,])], 0...

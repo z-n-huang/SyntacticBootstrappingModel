@@ -136,7 +136,7 @@ class MainClauseModel(object):
         softand = self._verbfeatprob[:,:,None]*self._verbreps[:,:,None]*self._projection[None,:,:]
         self._featureprob = 1.-T.prod(1.-softand, axis=1)
 
-    # ADDED: divergence function. Calculates JS-divergence (cf. SciPy version which yields the square root value)
+    # Added to White et al. model: divergence function. Calculates JS-divergence (cf. SciPy version which yields the square root value)
     def _get_js_divergence(self):
         vr = self._verbreps
         assertProb = vr[:, 0] #s_v,belief
@@ -156,7 +156,7 @@ class MainClauseModel(object):
 
         return js
 		
-    # ADDED: divergence function. Calculates KL-divergence
+    # Added to White et al. model: divergence function. Calculates KL-divergence
     def _get_kl_divergence(self):
         vr = self._verbreps
         assertProb = vr[:, 0]
@@ -166,13 +166,14 @@ class MainClauseModel(object):
         kl_request = ((1-requestProb) * T.log((1-requestProb) / assertProb) 
                 + requestProb * T.log(requestProb / (1-assertProb)))
         kl = ((kl_assert + kl_request) / 2 )**1 
-        # Above code leads to NaN error for verbs 0 and 1 (DECLARATIVE & IMPERATIVE), probably because of how Theano deals with floating point representations???
+        # Above code leads to NaN error for verbs 0 and 1 (DECLARATIVE & IMPERATIVE), probably because of how Theano deals with floating point representations
         # These should be 0. Stipulate them as such.
         # cf. https://stackoverflow.com/questions/31919818/theano-sqrt-returning-nan-values. 
         kl = T.set_subtensor(kl[0], 0.) # try ... js[tuple([0,])], 0...
         kl = T.set_subtensor(kl[1], 0.)
 
-        return kl                
+        return kl
+        
     def _initialize_loss(self):
 
         self._log_projection_prior = (self.gamma-1.)*T.log(self._projection) +\
@@ -238,6 +239,7 @@ class MainClauseModel(object):
         self._total_loss = self._prior+self._orthogonality_penalty+self._total_ll
         self._itr = T.ivector('itr')
         
+        ## Added to White et al. model
         # Option A: mean of JS divergence for observed verbs
         self._divergence = T.mean(self._get_js_divergence()[self.data.verb][self._itr])*self.divergence_weight
         
@@ -245,11 +247,11 @@ class MainClauseModel(object):
         # self._divergence = T.mean(self._get_kl_divergence()[self.data.verb][self._itr])*self.divergence_weight
         
         # Other options:
-        # T.mean(self._get_js_divergence()) # Option A1: mean of ALL divergences, regardless of verbs observed for the particular utterance
-        # T.mean(self._get_kl_divergence()) # Option B1: mean of ALL divergences, regardless of verbs observed for the particular utterance
+        # T.mean(self._get_js_divergence()) # Option A1: mean of JS divergence for ALL verbs, regardless of verbs observed for the particular utterance
+        # T.mean(self._get_kl_divergence()) # Option B1: mean of KL divergence for ALL verbs, regardless of verbs observed for the particular utterance
         self._itr_ll = T.sum(self._ll_per_feature[self._itr])/self.data.n('feature')
         self._itr_loss = self._prior+self._orthogonality_penalty+self._itr_ll + self._divergence
-        #ADDED # Subtract divergence. Effectively, we are taking the raw log-likelihood (_ll_per_feature), a negative value, and adjusting it by this divergence score. Both JSD and KLD yield a positive value. Since the model tries to maximize log-likelihood, we want the adjusted log-likelihood to be lower when the divergence score is high. One way to do so is adjust divergence with a negative weight, effectively subtracting divergence from log-likelihood.
+        # Subtract divergence. Effectively, we are taking the raw log-likelihood (_ll_per_feature), a negative value, and adjusting it by this divergence score. Both JSD and KLD yield a positive value. Since the model tries to maximize log-likelihood, we want the adjusted log-likelihood to be lower when the divergence score is high. One way to do so is adjust divergence with a negative weight, effectively subtracting divergence from log-likelihood.
                          
     def _initialize_updaters(self, stochastic):
         update_dict_ada = []
@@ -270,7 +272,7 @@ class MainClauseModel(object):
                 rep_grad = T.switch((rep<-10)*(rep_grad>0),
                                     T.zeros_like(rep_grad),
                                     rep_grad)
-                # ADDED; incorporating divergence causes verbreps gradients for DECLARATIVE and IMPERATIVE to equal NaN; so replace NaN with 0s (declaratives and imperative gradients don't change)
+                # Incorporating divergence causes verbreps gradients for DECLARATIVE and IMPERATIVE to equal NaN; so replace NaN with 0s (declaratives and imperative gradients don't change)
                 rep_grad = T.switch(T.isnan(rep_grad), 0., rep_grad)
             
             self.rep_grad_hist_t[name] = shared(np.ones(rep.shape.eval()),
@@ -297,7 +299,7 @@ class MainClauseModel(object):
             for i in range(nupdates):
                 total_loss, itr_loss, verbreps, projection, divergence = self.updater_ada(idx)
 
-            if not j % 10: # NH: originally 10
+            if not j % 10:
                 self._verbreps_hist.append(verbreps)
                 self._projection_hist.append(projection)
 
@@ -306,15 +308,13 @@ class MainClauseModel(object):
 
                 print('\n', j, '\tloss', np.round(total_loss, 3), '\titr_loss',\
                     np.round(itr_loss,3), '\tdiverge', np.round(divergence, 7), '\t', verb_list,'\n',
-                    # ADDED for debugging
-                    '\t', verb_list,'\t verb ID', np.array(self.data.verb)[idx],
-                    #'\nfp', self._featureprob.eval() #'\njs', divergence, '\nverbrep gradients', self.rep_grad_hist_t['verbreps'].eval()
+                    '\t', verb_list,'\t verb ID', np.array(self.data.verb)[idx]
                     )
                     
 
         
-    def fit(self, data, nepochs=0, niters=20000, nupdates=1, # niters = 20000
-            stochastic=True, verbose=True): # DEFAULT verbose = False
+    def fit(self, data, nepochs=0, niters=20000, nupdates=1,
+            stochastic=True, verbose=True): 
         self._initialize_model(data, stochastic)
 
         sentid = list(self.data.categories('sentenceid'))
@@ -381,7 +381,6 @@ class MainClauseModel(object):
     
     @property
     def feature_prob(self):
-        # NH amended
         featprob = pd.DataFrame(self._featureprob.eval(), index=self.data.categories('verb'),
                             columns=self.data.feature_names)
         featprob['verb'] = self.data.categories('verb')

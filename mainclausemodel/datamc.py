@@ -57,15 +57,13 @@ class MainClauseData(object):
         self._create_shared()
 
     def _append_mainclause_features(self):
-        ### NOT NEEDED
+        ### Post-processing needed for Gleason data
         #mcdata = pd.merge(self._data[['sentenceid', 'clausetype']],
         #                  self._mainclause_features)
         #mcdata = mcdata.rename(columns={'clausetype': 'verb'})
 
-        self._cclausetype = np.array(["DECLARATIVE", "IMPERATIVE"]) # MODIFIED; original = mcdata.verb.unique()
+        self._cclausetype = np.array(["DECLARATIVE", "IMPERATIVE"])
         self._nclausetype = self._cclausetype.shape[0]
-        
-        #self._data = pd.concat([self._data.drop('clausetype', axis=1), mcdata]) # NOT NEEDED
         
     def _convert_idvars_to_category(self):
         self._data.sentenceid = self._data.sentenceid.astype('category')
@@ -74,7 +72,7 @@ class MainClauseData(object):
             realverbs = [v for v in self._data.verb.unique() if v not in self._cclausetype]
             verbcats = list(self._cclausetype)+realverbs
             self._data.verb = self._data.verb.astype('category', categories=verbcats)
-			#print('mc operators', verbcats, '\nreal verbs:', realverbs)
+			
         else:
             self._data.verb = self._data.verb.astype('category')
 
@@ -143,7 +141,7 @@ def main(datapath='../bin/data/processedmc3oct3.csv', featurepath='../bin/data/m
     
     d['sentenceid'] = d.child+d.sentenceid.astype(str)
 
-    """ ### NOT NEEDED
+    """ ### Post-processing necessary for Gleason data
     d['sentenceid'] = d.child+d.context.astype(str)+d.sentenceid.astype(str)
 
     d['clausetype'] = 'SUBORDINATE'
@@ -175,12 +173,11 @@ def main(datapath='../bin/data/processedmc3oct3.csv', featurepath='../bin/data/m
         return d
     """
     d = d.drop(['utterance', 'embNegation', 
-                # 'embDiscourse', 'embAdverb', 
                ], axis = 1)
     if separate_children:
         data = {}
 
-        for c in d.child.unique()[0:2]:
+        for c in d.child.unique()[:10]:
             print('datapath', datapath, '\nChild:', c, d[d.child==c].shape)
             data[c] = MainClauseData(d[d.child==c], f)
 

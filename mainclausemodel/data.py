@@ -172,8 +172,7 @@ def main(datapath='../bin/data/gleason_data_orig.csv', featurepath='../bin/data/
     
     if separate_children:
         data = {}
-        # Cross-validate weights using 1st 5 subcorpora (0:5) in Gleason. Test on 10 subcorpora, 6-15 (i.e. [5:15])
-        for c in d.child.unique()[4:5]:
+        for c in d.child.unique()[:10]:
             d_proc = preprocess_features(d[d.child==c])
             print('Child:', c, d[d.child==c].shape)
             data[c] = MainClauseData(d_proc, f)

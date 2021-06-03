@@ -134,10 +134,13 @@ class MainClauseData(object):
     def sentence(self, idx):
         return np.where(self._data.sentenceid==idx)[0].astype(np.int32)
     
-def main(datapath='../bin/data/processedmc3oct3.csv', featurepath='../bin/data/mainclause_features.csv',
+def main(datapath='../bin/data/Mandarin_corpora_data.csv', featurepath='../bin/data/mainclause_features.csv',
          separate_children=True):
     d = pd.read_csv(datapath)
-    f = pd.read_csv(featurepath)
+    f = pd.read_csv(featurepath) 
+    ## Note that feature file here actually plays no role. 
+    ## For the English model, the feature file specifies the features for main clauses.
+    ## For the Mandarin model, these features are already specified in the data file.
     
     d['sentenceid'] = d.child+d.sentenceid.astype(str)
 

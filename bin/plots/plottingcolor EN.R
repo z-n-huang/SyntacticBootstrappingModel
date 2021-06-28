@@ -4,8 +4,6 @@ library(reshape2)
 library(ggplot2)
 library(tikzDevice)
 
-
-setwd('..') # ADDED
 # set ggplot2 theme
 
 theme_set(theme_classic()+ theme(axis.line.x = element_line(colour = 'black', size=0.5, linetype='solid'),
@@ -13,77 +11,17 @@ theme_set(theme_classic()+ theme(axis.line.x = element_line(colour = 'black', si
                                  panel.grid.major = element_line(size = (0.2), colour="grey")
 ))
 
-# load data
-## English
-
-# Results for model without a either-or bias ``nopen(alty)''
-verbreps_nopen_results <- rbind(
-  read_csv("~/gh/MainClauseModel/bin/results/en/nopen/verbreps_resultsen 0-2 nopen.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/en/nopen/verbreps_resultsen 2-4 nopen.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/en/nopen/verbreps_resultsen 4-5 nopen.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/en/nopen/verbreps_resultsen 5-10 nopen.csv")
-)
-
-# Results for model with a either-or JSD bias ``wpen(alty)''
+# Load CSV files
+## Example here loads model output for English
 verbreps_wpen_results <- rbind(
-  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen wpen 0002.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen wpen 0204.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen wpen 0406.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen wpen 0608.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen wpen 0810.csv")
+  read_csv("~/gh/MainClauseModel/bin/results/en/verbreps_resultsen 0010.csv")
 )
 
-# Results for model with a either-or KL bias
-verbreps_klpen_results <- rbind(
-  read_csv("~/gh/MainClauseModel/bin/results/en/kl/verbreps_resultsen wpenkl 0002.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/en/kl/verbreps_resultsen wpenkl 0204.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/en/kl/verbreps_resultsen wpenkl 0406.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/en/kl/verbreps_resultsen wpenkl 0608.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/en/kl/verbreps_resultsen wpenkl 0810.csv")
-)
-
-gleason_data <- read_csv("~/gh/MainClauseModel/bin/data/gleason_data_orig.csv")
-
-# With penalty
-verbreps_results <- verbreps_wpen_results %>% filter(verb != "IMPERATIVE" & verb!="DECLARATIVE")
-# Without penalty
-verbreps_results <- verbreps_nopen_results  %>% filter(verb != "IMPERATIVE" & verb!="DECLARATIVE")
-# KL penalty
-verbreps_results <- verbreps_klpen_results %>% filter(verb != "IMPERATIVE" & verb!="DECLARATIVE")
-
-
-## END LOADING ENGLISH
-
-## START LOADING MANDARIN
-verbreps_wpen_results <- rbind(
-  read_csv("~/gh/MainClauseModel/bin/results/mc/verbreps_resultsmc wpen 0002.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/mc/verbreps_resultsmc wpen 0204.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/mc/verbreps_resultsmc wpen 0406.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/mc/verbreps_resultsmc wpen 0608.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/mc/verbreps_resultsmc wpen 0810.csv")
-)
-
-# With penalty
-verbreps_results <- verbreps_wpen_results %>% filter(verb != "IMPERATIVE" & verb!="DECLARATIVE")
-
-# Without penalty
-verbreps_nopen_results <- rbind(
-  read_csv("~/gh/MainClauseModel/bin/results/mc/verbreps_resultsmc 0-2 nopen.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/mc/verbreps_resultsmc 2-4 nopen.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/mc/verbreps_resultsmc 4-6 nopen.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/mc/verbreps_resultsmc 6-8 nopen.csv"),
-  read_csv("~/gh/MainClauseModel/bin/results/mc/verbreps_resultsmc 8-10 nopen.csv")
-)
-# Without penalty
-verbreps_results <- verbreps_nopen_results  %>% filter(verb != "IMPERATIVE" & verb!="DECLARATIVE")
-
-
-gleason_data <- read_csv("~/gh/MainClauseModel/bin/data/processedmc3oct3.csv")
-verbreps_results <- verbreps_wpen_results %>% filter(verb != "tell")
-verbreps_results <- verbreps_mc_results %>% filter(verb != "tell")
-
-## END LOADING MANDARIN
-
+# Load corpus data
+# For English
+corpus_data <- read_csv("~/gh/MainClauseModel/bin/data/corpus_data_orig.csv")
+# For Mandarin
+corpus_data <- read_csv("~/gh/MainClauseModel/bin/data/Mandarin_corpora_data.csv")
 
 
 # Checks - there should be 10 children, 10 verbs, 20000 entries / verb / child
@@ -102,7 +40,7 @@ repmeans.summ <- group_by(repmeans.melt, verb, variable, sentence) %>%
             q025=quantile(value, .025), q975=quantile(value, .975),
             qmin=min(value), qmax=max(value))
 
-verb.counts <- count(gleason_data, verb, sort = T)
+verb.counts <- count(corpus_data, verb, sort = T)
 verb.counts <- filter(verb.counts, verb %in% unique(repmeans.summ$verb))
 
 repmeans.summ$verb <- ordered(repmeans.summ$verb, levels=verb.counts$verb)
@@ -139,8 +77,6 @@ repmeans.summ$verbPlot <- recode(repmeans.summ$verb,
 
 repmeans.summ <- repmeans.summ %>% filter(verbPlot != "<NA>")
 
-#tikz('~/experiments/MainClauseModel/bin/verbrep_prob.tikz', width=5.5, height=4)
-#Try 800x400 px
 ggplot(repmeans.summ
        %>% filter(verbPlot != "vacuous-verb"
          & verbPlot != "IMPERATIVE" & verbPlot !="DECLARATIVE"
@@ -166,10 +102,10 @@ ggplot(repmeans.summ
 #dev.off()
 
 ### PART TWO: Probability of semantics vs. frequency of clausal complements
-gleason_data$has.embpred <- gleason_data$embpred!='NONE' # English
-gleason_data$has.embpred <- gleason_data$embpred!='FALSE' # MC
+corpus_data$has.embpred <- corpus_data$embpred!='NONE' # English
+#corpus_data$has.embpred <- corpus_data$embpred!='FALSE' # Uncomment this line for MC
 
-emb.counts <- filter(gleason_data, verb %in% unique(repmeans.summ$verb)) %>%
+emb.counts <- filter(corpus_data, verb %in% unique(repmeans.summ$verb)) %>%
   count(child, verb, has.embpred) %>% group_by(child, verb) %>% mutate(tot=sum(n), prop=n/tot)
 
 repmeans.emb <- merge(filter(repmeans.melt, repmeans.melt$sentence==max(repmeans.melt$sentence)), 
@@ -261,7 +197,6 @@ ggplot(filter(repmeans.emb %>%
 #theme(axis.text.x=element_text(angle=45, hjust=1))
 #dev.off()
 
-# Bar plot version - try 800x400px
 ggplot(filter(repmeans.emb %>% 
                 filter(verb != "vacuous-verb"
                        & verb != "IMPERATIVE" & verb !="DECLARATIVE"
@@ -275,33 +210,3 @@ ggplot(filter(repmeans.emb %>%
                 breaks = c(0.001, 0.1, 0.25, 0.5, .9999), 
                 labels = c('~0', 0.1, .25, .5, '~1')) +
   xlab('Verb')
-
-# plot projection
-### PART THREE: PROJECTION
-projection_results$component <- 0:7
-# 0 child 1compT 2embpred 3embsubj 4ebtensetensed 5embtenseto 6itr 7objtrue preptrue sentence
-projection.melt <- melt(projection_results, c('child', 'component', 'itr', 'sentence'))
-
-projection.mean <- filter(projection.melt, !(((sentence)%%10)>0), 
-                          component %in% c(0, 1),
-                          !(variable %in% c('obj'))) %>% 
-  group_by(child, component, sentence, variable) %>%
-  summarise(m=mean(value))
-
-projection.summ <- group_by(projection.mean, component, sentence, variable) %>% 
-  summarise(med=median(m, na.rm=T), q25=quantile(m, .25, na.rm=T), q75=quantile(m, .75, na.rm=T), 
-            q025=quantile(m, .025, na.rm=T), q975=quantile(m, .975, na.rm=T),
-            qmin=min(m, na.rm=T), qmax=max(m, na.rm=T))
-
-#levels(projection.summ$variable) <- c('[emb comp]', '[emb clause]', '[emb subj]', '[emb tense]', '[emb infinitival]', '[do]', '[pp]')
-levels(projection.summ$variable) <- unique(projection.summ$variable)
-# levels can be obtained by unique(projection.summ$variable)
-ggplot(filter(projection.summ, sentence<101), aes(x=(sentence+1)*10, y=med, linetype=factor(component))) +
-  geom_ribbon(aes(ymin=qmin, ymax=qmax), fill="grey95") +
-  geom_ribbon(aes(ymin=q25, ymax=q75), fill="grey80") +
-  #geom_ribbon(alpha=.05, aes(ymin=q025, ymax=q975)) +
-  geom_line(color="black", size=1) +
-  facet_wrap(~variable, ncol = 4) + 
-  scale_linetype(name='') +
-  scale_x_continuous(name='Number of sentences seen', breaks=c(0,500,1000), labels=c('0', '500', '1000')) +
-  scale_y_continuous(name='Probability of semantic component')

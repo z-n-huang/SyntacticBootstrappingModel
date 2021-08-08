@@ -135,7 +135,7 @@ class MainClauseData(object):
     def sentence(self, idx):
         return np.where(self._data.sentenceid==idx)[0].astype(np.int32)
     
-def main(datapath='../bin/data/gleason_data_orig.csv', featurepath='../bin/data/mainclause_features.csv',
+def main(datapath='../bin/data/gleason_data.csv', featurepath='../bin/data/mainclause_features.csv',
          separate_children=True):
     d = pd.read_csv(datapath)
     f = pd.read_csv(featurepath)

@@ -2,7 +2,8 @@
 
 ## Overview
 
-This package implements the model of syntactic bootstrapping described in [Huang, White, Liao, Hacquard, & Lidz, to appear](https://ling.auf.net/lingbuzz/005553). This model is a modification of the one in [White, Hacquard, & Lidz 2017](http://aswhite.net/papers/white_labeling_2017.pdf), which is in turn based on the models in [White 2015](http://aswhite.net/papers/white_information_2015.pdf) and [White & Rawlins 2016](http://aswhite.net/papers/white_computational_2016_salt.pdf). 
+This package implements the model of syntactic bootstrapping described in [Huang, White, Liao, Hacquard, & Lidz, 2021] (https://doi.org/10.1080/10489223.2021.1934686) 
+([Lingbuzz preprint](https://ling.auf.net/lingbuzz/005553)). This model is a modification of the one in [White, Hacquard, & Lidz 2017](http://aswhite.net/papers/white_labeling_2017.pdf), which is in turn based on the models in [White 2015](http://aswhite.net/papers/white_information_2015.pdf) and [White & Rawlins 2016](http://aswhite.net/papers/white_computational_2016_salt.pdf). 
 
 ## Running the model
 

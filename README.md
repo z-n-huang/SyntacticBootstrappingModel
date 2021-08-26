@@ -22,3 +22,11 @@ By default, the model implements an either-or bias that is based on Jensen-Shann
 The data found in `bin/data/gleason_data.csv` was extracted based on an algorithm described in [White, Resnik, Hacquard, & Lidz under review](http://aswhite.net/papers/white_contextual_2016.pdf).
 
 The data found in `bin/data/Mandarin_corpora_data.csv` was based on child-ambient utterances in 10 Mandarin CHILDES corpora, as described in Huang et al. (Section 5.3.2). Note that the syntactic features listed for a given sentence might not align with one's intuitions. For subordinate clauses, this is because of errors introduced by the automated annotation process. For main clauses, this is because the features and sentence type (e.g. declarative or imperative) are actually derived directly from manual annotations of a smaller random sample of 600 utterances.
+
+## Packages
+The script was tested on:
+* Python 3.7.3
+* numpy 1.16.2
+* pandas 0.24.2
+* patsy 0.5.1
+* theano 1.0.4

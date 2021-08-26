@@ -25,7 +25,7 @@ The data found in `bin/data/Mandarin_corpora_data.csv` was based on child-ambien
 
 ## Packages
 The script was tested on:
-* Python 3.7.3
+* Python 3.7.3 (via conda)
 * numpy 1.16.2
 * pandas 0.24.2
 * patsy 0.5.1

@@ -71,7 +71,8 @@ class MainClauseData(object):
         if self._nclausetype:
             realverbs = [v for v in self._data.verb.unique() if v not in self._cclausetype]
             verbcats = list(self._cclausetype)+realverbs
-            self._data.verb = self._data.verb.astype('category', categories=verbcats)
+            #self._data.verb = self._data.verb.astype('category', categories=verbcats)
+            self._data.verb = self._data.verb.astype('category', pd.api.types.CategoricalDtype(categories=verbcats)) # updated because original version of specifying as type is deprecated
 			
         else:
             self._data.verb = self._data.verb.astype('category')

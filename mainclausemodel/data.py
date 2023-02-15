@@ -143,8 +143,8 @@ def main(datapath='../bin/data/gleason_data.csv', featurepath='../bin/data/mainc
     d['sentenceid'] = d.child+d.context.astype(str)+d.sentenceid.astype(str)
 
     d['clausetype'] = 'SUBORDINATE'
-    d.ix[(d.matrix) & (d.subj), 'clausetype'] = 'DECLARATIVE'
-    d.ix[(d.matrix) & ~(d.subj), 'clausetype'] = 'IMPERATIVE'
+    d.loc[(d.matrix) & (d.subj), 'clausetype'] = 'DECLARATIVE'
+    d.loc[(d.matrix) & ~(d.subj), 'clausetype'] = 'IMPERATIVE'
 
     d = d.drop(['matrix', 'subj'], axis=1)
         
